@@ -3,9 +3,12 @@ export interface Post {
     title: string;
     description: string;
     author: string;
-    distance: string; // e.g., "300m", "1.2km"
+    distance: number; // in meters returned from backend
     type: "help" | "meetup";
     commentCount: number;
     createdAt: string;
     authorAvatar?: string;
+    lat?: number;
+    lng?: number;
+    meetupTime?: string;
 }
