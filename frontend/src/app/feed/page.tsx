@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useLocation } from "@/hooks/useLocation";
-import { useFeed } from "@/hooks/useFeed";
-import { RadiusSelector } from "@/components/RadiusSelector";
 import { PostCard } from "@/components/PostCard";
-import { MapPinOff, Compass, PlusCircle } from "lucide-react";
+import { RadiusSelector } from "@/components/RadiusSelector";
 import { Button } from "@/components/ui/button";
+import { useFeed } from "@/hooks/useFeed";
+import { useLocation } from "@/hooks/useLocation";
+import { useRealtimeFeed } from "@/hooks/useRealtimeFeed";
+import { useQueryClient } from "@tanstack/react-query";
+import { Compass, MapPinOff, PlusCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 function FeedSkeleton() {
     return (
@@ -37,10 +39,32 @@ export default function FeedPage() {
     const { lat, lng, error: locationError, loading: locationLoading } = useLocation();
     const { posts, isLoading: feedLoading, error: feedError } = useFeed(lat, lng, parseInt(radius));
 
+    const queryClient = useQueryClient();
+    const { hasNewPosts, clearNewPosts } = useRealtimeFeed();
+
+    const handleRefresh = () => {
+        queryClient.invalidateQueries({ queryKey: ["feed"] });
+        clearNewPosts();
+    };
+
     const isLoading = locationLoading || feedLoading;
 
     return (
-        <div className="container max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500">
+        <div className="container max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500 relative">
+
+            {/* Real-time Refresh Banner */}
+            {hasNewPosts && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+                    <Button
+                        onClick={handleRefresh}
+                        className="rounded-full shadow-lg shadow-primary/20 gap-2 border border-primary/20 backdrop-blur-md"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        New posts nearby! Refresh
+                    </Button>
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Nearby Feed</h1>

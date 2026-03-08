@@ -55,6 +55,14 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		return
 	}
 
+	// Broadcast that a new post was created nearby
+	services.Hub.Broadcast(services.EventPayload{
+		Type:   services.EventPostCreated,
+		PostID: post.ID,
+		Lat:    req.Lat,
+		Lng:    req.Lng,
+	})
+
 	c.JSON(http.StatusCreated, post)
 }
 

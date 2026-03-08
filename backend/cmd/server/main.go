@@ -69,6 +69,9 @@ func main() {
 	protected := api.Group("/")
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
+	// Real-time Event Stream (SSE)
+	protected.GET("/events", handlers.HandleEvents)
+
 	// Posts API
 	posts := protected.Group("/posts")
 	{

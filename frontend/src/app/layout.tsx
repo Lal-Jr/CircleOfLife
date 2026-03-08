@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 import { Providers } from "@/components/query-provider";
 import { Navbar } from "@/components/Navbar";
+import { BottomNav } from "@/components/BottomNav";
 
 export default function RootLayout({
   children,
@@ -32,7 +33,8 @@ export default function RootLayout({
       >
         <Providers>
           <Navbar />
-          <main className="flex-1 pb-16 md:pb-0">{children}</main>
+          <main className="flex-1 pb-20 sm:pb-0">{children}</main>
+          <BottomNav />
         </Providers>
       </body>
     </html>
