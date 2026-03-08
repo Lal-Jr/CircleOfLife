@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 
+	"circleoflife/internal/cache"
 	"circleoflife/internal/config"
 	"circleoflife/internal/db"
+	"circleoflife/internal/events"
 	"circleoflife/internal/handlers"
 	"circleoflife/internal/middleware"
 	"circleoflife/internal/repository"
@@ -20,22 +23,26 @@ func main() {
 	// 2. Setup Database Connection (includes running PostGIS migrations)
 	db.ConnectDB(cfg.DatabaseURL)
 
-	// 3. Initialize Repositories
+	// 3. Setup Redis Cache and Pub/Sub Event Subscription
+	cache.InitRedis(cfg.RedisURL)
+	events.SubscribePostEvents(context.Background())
+
+	// 4. Initialize Repositories
 	userRepo := repository.NewUserRepository()
 	postRepo := repository.NewPostRepository()
 	commentRepo := repository.NewCommentRepository()
 
-	// 4. Initialize Services
+	// 5. Initialize Services
 	authSvc := services.NewAuthService(userRepo, cfg.JWTSecret)
 	postSvc := services.NewPostService(postRepo)
 	commentSvc := services.NewCommentService(commentRepo)
 
-	// 5. Initialize Handlers
+	// 6. Initialize Handlers
 	authHandler := handlers.NewAuthHandler(authSvc)
 	postHandler := handlers.NewPostHandler(postSvc)
 	commentHandler := handlers.NewCommentHandler(commentSvc)
 
-	// 6. Setup Router
+	// 7. Setup Router
 	r := gin.Default()
 
 	// Global Middleware Setup
@@ -84,7 +91,7 @@ func main() {
 		posts.POST("/:id/comments", commentHandler.CreateComment)
 	}
 
-	// 7. Start the server
+	// 8. Start the server
 	log.Printf("Starting Server natively running on %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Server inherently failed to launch: %v", err)

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"circleoflife/internal/events"
 	"circleoflife/internal/models"
 	"circleoflife/internal/services"
 	"circleoflife/pkg/utils"
@@ -55,13 +56,8 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		return
 	}
 
-	// Broadcast that a new post was created nearby
-	services.Hub.Broadcast(services.EventPayload{
-		Type:   services.EventPostCreated,
-		PostID: post.ID,
-		Lat:    req.Lat,
-		Lng:    req.Lng,
-	})
+	// Broadcast that a new post was created nearby via Redis Pub/Sub
+	events.PublishPostCreated(post.ID, req.Lat, req.Lng)
 
 	c.JSON(http.StatusCreated, post)
 }

@@ -11,6 +11,7 @@ type Config struct {
 	Port        string
 	DatabaseURL string
 	JWTSecret   string
+	RedisURL    string
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -24,6 +25,7 @@ func LoadConfig() *Config {
 		Port:        getEnv("PORT", "8080"),
 		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/community?sslmode=disable"),
 		JWTSecret:   getEnv("JWT_SECRET", "supersecret"),
+		RedisURL:    getEnv("REDIS_URL", "localhost:6379"),
 	}
 }
 
