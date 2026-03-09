@@ -15,7 +15,7 @@ import (
 
 type PostService interface {
 	CreatePost(ctx context.Context, p *models.Post, lat, lng float64) error
-	GetNearbyPosts(ctx context.Context, lat, lng float64, radius int) ([]models.Post, error)
+	GetNearbyPosts(ctx context.Context, lat, lng float64, radius, page, limit int) ([]models.Post, error)
 	GetPostByID(ctx context.Context, id string, lat, lng float64) (*models.Post, error)
 }
 
@@ -31,11 +31,11 @@ func (s *postService) CreatePost(ctx context.Context, p *models.Post, lat, lng f
 	return s.repo.CreatePost(ctx, p, lat, lng)
 }
 
-func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radius int) ([]models.Post, error) {
-	// 1. Generate Cache Key using geographic buckets (rounded to 2 decimal places)
+func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radius, page, limit int) ([]models.Post, error) {
+	// 1. Generate Cache Key using geographic buckets (rounded to 2 decimal places) and pagination boundaries
 	latBucket := math.Round(lat*100) / 100
 	lngBucket := math.Round(lng*100) / 100
-	cacheKey := fmt.Sprintf("feed:%.2f:%.2f:%d", latBucket, lngBucket, radius)
+	cacheKey := fmt.Sprintf("feed:%.2f:%.2f:%d:%d:%d", latBucket, lngBucket, radius, page, limit)
 
 	// 2. Check for Cache Hit if Redis is available
 	if cache.Client != nil {
@@ -55,7 +55,7 @@ func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radi
 	}
 
 	// 3. Fallback to Database Query natively via Repository PostGIS bounds
-	posts, err := s.repo.GetNearbyPosts(ctx, lat, lng, radius)
+	posts, err := s.repo.GetNearbyPosts(ctx, lat, lng, radius, page, limit)
 	if err != nil {
 		return nil, err
 	}

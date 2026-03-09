@@ -1,27 +1,36 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Post } from "@/types/post";
 
-export function useFeed(lat: number | null, lng: number | null, radiusMs: number = 5) {
-    const { data, isLoading, error } = useQuery({
-        queryKey: ["posts", lat, lng, radiusMs],
-        queryFn: async () => {
-            if (lat === null || lng === null) return [];
+export function useFeed(lat: number | null, lng: number | null, radiusKm: number = 5) {
+    const fetchPosts = async ({ pageParam = 1 }) => {
+        if (lat === null || lng === null) return { posts: [], nextPage: undefined };
 
-            const response = await api.get(`/posts`, {
-                params: { lat, lng, radius: radiusMs }
-            });
-            // The backend will return an array of posts. For now, if no backend, we just return empty or error.
-            // But the integration plan states we should hit the real API.
-            // So we assume the REST API returns something like `{ posts: Post[] }` or `Post[]`
-            return response.data as Post[];
-        },
+        const response = await api.get(`/posts`, {
+            params: { lat, lng, radius: radiusKm, page: pageParam, limit: 10 }
+        });
+
+        const data = response.data as Post[];
+
+        return {
+            posts: data,
+            nextPage: data.length === 10 ? pageParam + 1 : undefined,
+        };
+    };
+
+    const query = useInfiniteQuery({
+        queryKey: ["feed", lat, lng, radiusKm],
+        queryFn: fetchPosts,
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) => lastPage.nextPage,
         enabled: lat !== null && lng !== null,
     });
 
+    // Flatten pages for easy iteration inside the UI
+    const posts = query.data?.pages.flatMap((page) => page.posts) || [];
+
     return {
-        posts: data || [],
-        isLoading,
-        error,
+        ...query,
+        posts,
     };
 }

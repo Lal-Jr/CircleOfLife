@@ -9,7 +9,8 @@ import { useRealtimeFeed } from "@/hooks/useRealtimeFeed";
 import { useQueryClient } from "@tanstack/react-query";
 import { Compass, MapPinOff, PlusCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 
 function FeedSkeleton() {
     return (
@@ -37,20 +38,76 @@ function FeedSkeleton() {
 export default function FeedPage() {
     const [radius, setRadius] = useState("5");
     const { lat, lng, error: locationError, loading: locationLoading } = useLocation();
-    const { posts, isLoading: feedLoading, error: feedError } = useFeed(lat, lng, parseInt(radius));
+
+    const {
+        posts,
+        isLoading: feedLoading,
+        error: feedError,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
+    } = useFeed(lat, lng, parseInt(radius));
 
     const queryClient = useQueryClient();
     const { hasNewPosts, clearNewPosts } = useRealtimeFeed();
+    const { ref: observerRef, inView } = useInView();
 
-    const handleRefresh = () => {
-        queryClient.invalidateQueries({ queryKey: ["feed"] });
+    // Pull to refresh UX states
+    const [pullDistance, setPullDistance] = useState(0);
+    const [startY, setStartY] = useState(0);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await queryClient.invalidateQueries({ queryKey: ["feed"] });
         clearNewPosts();
+        setIsRefreshing(false);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (window.scrollY === 0) setStartY(e.touches[0].clientY);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (startY > 0) {
+            const distance = e.touches[0].clientY - startY;
+            if (distance > 0 && window.scrollY === 0) {
+                setPullDistance(Math.min(distance * 0.4, 80));
+            }
+        }
+    };
+
+    const handleTouchEnd = async () => {
+        if (pullDistance > 60 && !isRefreshing) {
+            await handleRefresh();
+        }
+        setStartY(0);
+        setPullDistance(0);
     };
 
     const isLoading = locationLoading || feedLoading;
 
     return (
-        <div className="container max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500 relative">
+        <div
+            className="container max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500 relative transition-transform"
+            style={{ transform: `translateY(${isRefreshing ? 60 : pullDistance}px)` }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
+
+            {/* Pull to refresh visual UI mounted behind absolute bounds */}
+            {(pullDistance > 0 || isRefreshing) && (
+                <div className="absolute top-0 left-0 right-0 h-16 -mt-16 flex items-center justify-center w-full">
+                    <RefreshCw className={`h-6 w-6 text-primary transition-all duration-300 ${isRefreshing ? 'animate-spin opacity-100' : 'opacity-70'}`} style={{ transform: `rotate(${pullDistance * 3}deg)` }} />
+                </div>
+            )}
 
             {/* Real-time Refresh Banner */}
             {hasNewPosts && (
@@ -104,13 +161,20 @@ export default function FeedPage() {
                 ) : isLoading ? (
                     <FeedSkeleton />
                 ) : posts.length > 0 ? (
-                    <div className="grid gap-4">
-                        {posts.map((post) => (
-                            <div key={post.id} className="animate-in slide-in-from-bottom-4 duration-500 fade-in" style={{ animationDelay: `${Math.random() * 200}ms`, animationFillMode: "both" }}>
-                                <PostCard post={post} />
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                        <div className="grid gap-4">
+                            {posts.map((post) => (
+                                <div key={post.id} className="animate-in slide-in-from-bottom-4 duration-500 fade-in">
+                                    <PostCard post={post} />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Infinite Scroll trigger anchor */}
+                        <div ref={observerRef} className="h-14 w-full flex items-center justify-center mt-4">
+                            {isFetchingNextPage && <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />}
+                        </div>
+                    </>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-20 text-center bg-card rounded-xl border shadow-sm">
                         <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4 text-4xl">

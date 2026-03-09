@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 import { Providers } from "@/components/query-provider";
 import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
+import { NetworkStatus } from "@/components/NetworkStatus";
 
 export default function RootLayout({
   children,
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background font-sans flex flex-col`}
       >
+        <NetworkStatus />
         <Providers>
           <Navbar />
           <main className="flex-1 pb-20 sm:pb-0">{children}</main>

@@ -10,7 +10,7 @@ import (
 
 type PostRepository interface {
 	CreatePost(ctx context.Context, p *models.Post, lat, lng float64) error
-	GetNearbyPosts(ctx context.Context, lat, lng float64, radiusKm int) ([]models.Post, error)
+	GetNearbyPosts(ctx context.Context, lat, lng float64, radiusKm, page, limit int) ([]models.Post, error)
 	GetPostByID(ctx context.Context, id string, lat, lng float64) (*models.Post, error)
 }
 
@@ -38,9 +38,10 @@ func (r *postRepository) CreatePost(ctx context.Context, p *models.Post, lat, ln
 	return err
 }
 
-func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, radiusKm int) ([]models.Post, error) {
+func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, radiusKm, page, limit int) ([]models.Post, error) {
 	// Radius in meters
 	radiusMeters := radiusKm * 1000
+	offset := (page - 1) * limit
 
 	// We calculate distance using PostGIS and also perform a spatial index filter via ST_DWithin
 	query := `
@@ -57,10 +58,10 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 			$3
 		)
 		ORDER BY distance ASC, p.created_at DESC
-		LIMIT 50;
+		LIMIT $4 OFFSET $5;
 	`
 
-	rows, err := db.Pool.Query(ctx, query, lng, lat, radiusMeters)
+	rows, err := db.Pool.Query(ctx, query, lng, lat, radiusMeters, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error querying nearby posts: %v", err)
 	}

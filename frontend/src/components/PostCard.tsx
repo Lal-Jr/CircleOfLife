@@ -1,7 +1,8 @@
 import { Post } from "@/types/post";
 import { formatDistance, formatTimeAgo } from "@/lib/utils";
-import { MessageSquare, MapPin, MoreHorizontal } from "lucide-react";
+import { MessageSquare, MapPin, Share2, ThumbsUp } from "lucide-react";
 import Link from "next/link";
+import React from "react";
 
 import {
     Card,
@@ -18,7 +19,7 @@ interface PostCardProps {
     onClick?: (id: string) => void;
 }
 
-export function PostCard({ post, onClick }: PostCardProps) {
+export const PostCard = React.memo(({ post, onClick }: PostCardProps) => {
     const isHelp = post.type === "help";
     const formattedDate = formatTimeAgo(post.createdAt);
 
@@ -50,9 +51,6 @@ export function PostCard({ post, onClick }: PostCardProps) {
                             </div>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground -mr-2">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
                 </CardHeader>
 
                 <CardContent className="p-4 pt-2">
@@ -76,18 +74,24 @@ export function PostCard({ post, onClick }: PostCardProps) {
                     </p>
                 </CardContent>
 
-                <CardFooter className="p-4 pt-0 border-t flex items-center justify-between mt-auto bg-muted/10">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2 h-8 px-2 gap-1.5" asChild>
-                        <div className="flex items-center">
+                <CardFooter className="p-2 pt-2 border-t flex items-center justify-between mt-auto bg-muted/5 gap-1">
+                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-primary hover:bg-primary/10 h-9 gap-1.5 rounded-md" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                        <ThumbsUp className="h-4 w-4" />
+                        <span className="text-xs font-medium">Helpful</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-primary hover:bg-primary/10 h-9 gap-1.5 rounded-md" asChild>
+                        <div className="flex items-center pointer-events-none">
                             <MessageSquare className="h-4 w-4" />
-                            <span className="text-xs font-medium">{post.commentCount}</span>
+                            <span className="text-xs font-medium">{post.commentCount} <span className="hidden sm:inline">Comments</span></span>
                         </div>
                     </Button>
-                    <Button size="sm" variant={isHelp ? "secondary" : "default"} className="h-8 text-xs px-4 rounded-full" asChild>
-                        <div className="pointer-events-none">View Details</div>
+                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-primary hover:bg-primary/10 h-9 gap-1.5 rounded-md" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                        <Share2 className="h-4 w-4" />
+                        <span className="text-xs font-medium">Share</span>
                     </Button>
                 </CardFooter>
             </Link>
         </Card>
     );
-}
+});
+PostCard.displayName = "PostCard";

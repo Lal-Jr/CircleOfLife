@@ -66,6 +66,8 @@ func (h *PostHandler) GetNearbyPosts(c *gin.Context) {
 	latStr := c.Query("lat")
 	lngStr := c.Query("lng")
 	radiusStr := c.DefaultQuery("radius", "5") // Default 5 km
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
 
 	if latStr == "" || lngStr == "" {
 		utils.JSONError(c, http.StatusBadRequest, "Latitude and longitude are required")
@@ -75,13 +77,15 @@ func (h *PostHandler) GetNearbyPosts(c *gin.Context) {
 	lat, errLat := strconv.ParseFloat(latStr, 64)
 	lng, errLng := strconv.ParseFloat(lngStr, 64)
 	radius, errRad := strconv.Atoi(radiusStr)
+	page, errPage := strconv.Atoi(pageStr)
+	limit, errLimit := strconv.Atoi(limitStr)
 
-	if errLat != nil || errLng != nil || errRad != nil {
+	if errLat != nil || errLng != nil || errRad != nil || errPage != nil || errLimit != nil {
 		utils.JSONError(c, http.StatusBadRequest, "Invalid query parameters")
 		return
 	}
 
-	posts, err := h.postService.GetNearbyPosts(c.Request.Context(), lat, lng, radius)
+	posts, err := h.postService.GetNearbyPosts(c.Request.Context(), lat, lng, radius, page, limit)
 	if err != nil {
 		utils.JSONError(c, http.StatusInternalServerError, "Failed to fetch nearby posts")
 		return
