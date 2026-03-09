@@ -10,11 +10,12 @@ export function useFeed(lat: number | null, lng: number | null, radiusKm: number
             params: { lat, lng, radius: radiusKm, page: pageParam, limit: 10 }
         });
 
-        const data = response.data as Post[];
+        const payloadData = response.data.data as Post[];
+        const hasNext = response.data.meta?.hasNext || false;
 
         return {
-            posts: data,
-            nextPage: data.length === 10 ? pageParam + 1 : undefined,
+            posts: payloadData,
+            nextPage: hasNext ? pageParam + 1 : undefined,
         };
     };
 

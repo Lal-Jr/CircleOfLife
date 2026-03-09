@@ -59,7 +59,7 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 	// Broadcast that a new post was created nearby via Redis Pub/Sub
 	events.PublishPostCreated(post.ID, req.Lat, req.Lng)
 
-	c.JSON(http.StatusCreated, post)
+	c.JSON(http.StatusCreated, models.APIResponse{Data: post})
 }
 
 func (h *PostHandler) GetNearbyPosts(c *gin.Context) {
@@ -96,7 +96,15 @@ func (h *PostHandler) GetNearbyPosts(c *gin.Context) {
 		posts = []models.Post{}
 	}
 
-	c.JSON(http.StatusOK, posts)
+	hasNext := len(posts) == limit
+	c.JSON(http.StatusOK, models.APIResponse{
+		Data: posts,
+		Meta: &models.PaginatedMeta{
+			Page:    page,
+			Limit:   limit,
+			HasNext: hasNext,
+		},
+	})
 }
 
 func (h *PostHandler) GetPostByID(c *gin.Context) {
@@ -115,5 +123,5 @@ func (h *PostHandler) GetPostByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, post)
+	c.JSON(http.StatusOK, models.APIResponse{Data: post})
 }

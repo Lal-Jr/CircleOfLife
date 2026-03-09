@@ -54,7 +54,31 @@ func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radi
 		}
 	}
 
-	// 3. Fallback to Database Query natively via Repository PostGIS bounds
+	// 3. Cache Miss - Cache Stampede Protection (Redis Lock)
+	if cache.Client != nil {
+		lockKey := "feed_lock:" + cacheKey
+		// Attempt to acquire a short 5-second computation lock
+		acquired, _ := cache.Client.SetNX(ctx, lockKey, "1", 5*time.Second).Result()
+		if !acquired {
+			// Another request is actively building this cache.
+			// To maintain raw performance, we gently yield and wait up to 500ms for it to finish.
+			time.Sleep(200 * time.Millisecond)
+			retryData, err := cache.Client.Get(ctx, cacheKey).Result()
+			if err == nil {
+				var retryPosts []models.Post
+				if json.Unmarshal([]byte(retryData), &retryPosts) == nil {
+					log.Printf("feed cache hit (Yielded to lock) (Key: %s)", cacheKey)
+					return retryPosts, nil
+				}
+			}
+			// If still empty after yielding, we proceed down to the DB intentionally to guarantee uptime
+		} else {
+			// Make sure we release our lock explicitly when we finish the DB fetch
+			defer cache.Client.Del(ctx, lockKey)
+		}
+	}
+
+	// 4. Fallback to Database Query natively via Repository PostGIS bounds
 	posts, err := s.repo.GetNearbyPosts(ctx, lat, lng, radius, page, limit)
 	if err != nil {
 		return nil, err

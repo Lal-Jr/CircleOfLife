@@ -7,7 +7,7 @@ export function usePost(id: string) {
         queryKey: ["post", id],
         queryFn: async () => {
             const response = await api.get(`/posts/${id}`);
-            return response.data as Post;
+            return response.data.data as Post;
         },
         enabled: !!id,
     });

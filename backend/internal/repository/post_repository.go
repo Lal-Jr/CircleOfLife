@@ -49,7 +49,12 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 			p.id, p.user_id, p.title, p.description, p.type, p.meetup_time, p.created_at,
 			u.name AS author,
 			ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance,
-			(SELECT count(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
+			(SELECT count(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
+			(
+				(1.0 / (EXTRACT(EPOCH FROM (NOW() - p.created_at))/3600 + 1.0)) + 
+				(1.0 / (ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) / 1000 + 1.0)) +
+				(CASE WHEN p.type = 'help' THEN 0.2 ELSE 0.0 END)
+			) AS score
 		FROM posts p
 		JOIN users u ON p.user_id = u.id
 		WHERE ST_DWithin(
@@ -57,7 +62,7 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 			ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 
 			$3
 		)
-		ORDER BY distance ASC, p.created_at DESC
+		ORDER BY score DESC, distance ASC, p.created_at DESC
 		LIMIT $4 OFFSET $5;
 	`
 

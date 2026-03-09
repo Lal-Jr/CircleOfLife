@@ -7,7 +7,7 @@ export function useComments(postId: string) {
         queryKey: ["comments", postId],
         queryFn: async () => {
             const response = await api.get(`/posts/${postId}/comments`);
-            return response.data as Comment[];
+            return response.data.data as Comment[];
         },
         enabled: !!postId,
     });

@@ -2,6 +2,17 @@ package models
 
 import "time"
 
+type PaginatedMeta struct {
+	Page    int  `json:"page"`
+	Limit   int  `json:"limit"`
+	HasNext bool `json:"hasNext"`
+}
+
+type APIResponse struct {
+	Data interface{}  `json:"data"`
+	Meta *PaginatedMeta `json:"meta,omitempty"`
+}
+
 type User struct {
 	ID           string    `json:"id" db:"id"`
 	Name         string    `json:"name" db:"name" validate:"required"`
@@ -26,8 +37,8 @@ type Post struct {
 }
 
 type CreatePostInput struct {
-	Title       string    `json:"title" validate:"required"`
-	Description string    `json:"description" validate:"required"`
+	Title       string    `json:"title" validate:"required,min=5,max=120"`
+	Description string    `json:"description" validate:"required,min=10,max=1000"`
 	Type        string    `json:"type" validate:"required,oneof=help meetup"`
 	Lat         float64   `json:"lat" validate:"required,latitude"`
 	Lng         float64   `json:"lng" validate:"required,longitude"`

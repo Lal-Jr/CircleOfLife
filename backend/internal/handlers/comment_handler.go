@@ -53,7 +53,7 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, comment)
+	c.JSON(http.StatusCreated, models.APIResponse{Data: comment})
 }
 
 func (h *CommentHandler) GetComments(c *gin.Context) {
@@ -69,5 +69,5 @@ func (h *CommentHandler) GetComments(c *gin.Context) {
 		comments = []models.Comment{}
 	}
 
-	c.JSON(http.StatusOK, comments)
+	c.JSON(http.StatusOK, models.APIResponse{Data: comments})
 }

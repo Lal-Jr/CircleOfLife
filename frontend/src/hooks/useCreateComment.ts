@@ -7,7 +7,7 @@ export function useCreateComment() {
     const mutation = useMutation({
         mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
             const response = await api.post(`/posts/${postId}/comments`, { content });
-            return response.data;
+            return response.data.data;
         },
         onMutate: async (newComment) => {
             await queryClient.cancelQueries({ queryKey: ["comments", newComment.postId] });

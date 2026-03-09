@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"circleoflife/internal/cache"
 	"circleoflife/internal/config"
@@ -65,6 +66,11 @@ func main() {
 	// API Routes definition
 	api := r.Group("/api")
 
+	api.Use(middleware.RequestIDMiddleware())
+	api.Use(middleware.LoggerMiddleware())
+
+	api.GET("/health", handlers.HealthCheck)
+
 	// Authentication API
 	auth := api.Group("/auth")
 	{
@@ -79,16 +85,18 @@ func main() {
 	// Real-time Event Stream (SSE)
 	protected.GET("/events", handlers.HandleEvents)
 
-	// Posts API
+	// Posts API (Max 60 lookups/min on general feed)
 	posts := protected.Group("/posts")
+	posts.Use(middleware.RateLimitMiddleware(60, time.Minute))
 	{
 		posts.GET("", postHandler.GetNearbyPosts)
-		posts.POST("", postHandler.CreatePost)
+		// Creation throttled tighter (5/min)
+		posts.POST("", middleware.RateLimitMiddleware(5, time.Minute), postHandler.CreatePost)
 		posts.GET("/:id", postHandler.GetPostByID)
 
-		// Nested Comments logic
+		// Nested Comments (20/min)
 		posts.GET("/:id/comments", commentHandler.GetComments)
-		posts.POST("/:id/comments", commentHandler.CreateComment)
+		posts.POST("/:id/comments", middleware.RateLimitMiddleware(20, time.Minute), commentHandler.CreateComment)
 	}
 
 	// 8. Start the server

@@ -18,7 +18,7 @@ export function useCreatePost() {
     const mutation = useMutation({
         mutationFn: async (payload: CreatePostPayload) => {
             const response = await api.post("/posts", payload);
-            return response.data;
+            return response.data.data;
         },
         onMutate: async (newPost) => {
             await queryClient.cancelQueries({ queryKey: ["feed"] });
