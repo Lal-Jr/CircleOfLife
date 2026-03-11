@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 type CommentHandler struct {
@@ -42,10 +43,11 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		return
 	}
 
+	p := bluemonday.StrictPolicy()
 	comment := models.Comment{
 		PostID:  postID,
 		UserID:  userID.(string),
-		Content: req.Content,
+		Content: p.Sanitize(req.Content),
 	}
 
 	if err := h.commentService.CreateComment(c.Request.Context(), &comment); err != nil {

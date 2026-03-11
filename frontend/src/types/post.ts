@@ -11,4 +11,5 @@ export interface Post {
     lat?: number;
     lng?: number;
     meetupTime?: string;
+    priority?: string;
 }

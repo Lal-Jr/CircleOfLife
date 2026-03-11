@@ -94,9 +94,9 @@ func main() {
 		posts.POST("", middleware.RateLimitMiddleware(5, time.Minute), postHandler.CreatePost)
 		posts.GET("/:id", postHandler.GetPostByID)
 
-		// Nested Comments (20/min)
+		// Nested Comments (10/min limit per user to prevent spam)
 		posts.GET("/:id/comments", commentHandler.GetComments)
-		posts.POST("/:id/comments", middleware.RateLimitMiddleware(20, time.Minute), commentHandler.CreateComment)
+		posts.POST("/:id/comments", middleware.RateLimitMiddleware(10, time.Minute), commentHandler.CreateComment)
 	}
 
 	// 8. Start the server

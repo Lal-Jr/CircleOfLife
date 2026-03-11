@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 type PostHandler struct {
@@ -43,10 +44,11 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		return
 	}
 
+	p := bluemonday.StrictPolicy()
 	post := models.Post{
 		UserID:      userID.(string),
-		Title:       req.Title,
-		Description: req.Description,
+		Title:       p.Sanitize(req.Title),
+		Description: p.Sanitize(req.Description),
 		Type:        req.Type,
 		MeetupTime:  req.MeetupTime,
 	}

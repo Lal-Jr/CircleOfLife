@@ -51,8 +51,17 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 			ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance,
 			(SELECT count(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
 			(
+				CASE 
+					WHEN ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) < 500 THEN 'high'
+					WHEN ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) < 2000 THEN 'medium'
+					ELSE 'normal'
+				END
+			) AS priority,
+			(
 				(1.0 / (EXTRACT(EPOCH FROM (NOW() - p.created_at))/3600 + 1.0)) + 
 				(1.0 / (ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) / 1000 + 1.0)) +
+				(CASE WHEN ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) < 500 THEN 0.5 ELSE 0.0 END) +
+				(CASE WHEN ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) < 2000 AND ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) >= 500 THEN 0.2 ELSE 0.0 END) +
 				(CASE WHEN p.type = 'help' THEN 0.2 ELSE 0.0 END)
 			) AS score
 		FROM posts p
@@ -77,7 +86,7 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 		var p models.Post
 		err := rows.Scan(
 			&p.ID, &p.UserID, &p.Title, &p.Description, &p.Type, &p.MeetupTime, &p.CreatedAt,
-			&p.Author, &p.Distance, &p.CommentCount,
+			&p.Author, &p.Distance, &p.CommentCount, &p.Priority,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning post row: %v", err)

@@ -93,6 +93,10 @@ export default function FeedPage() {
 
     const isLoading = locationLoading || feedLoading;
 
+    // Separate the high priority nearby highlight from the rest of the feed
+    const highlightPost = posts.find(p => p.priority === "high");
+    const normalPosts = highlightPost ? posts.filter(p => p.id !== highlightPost.id) : posts;
+
     return (
         <div
             className="container max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500 relative transition-transform"
@@ -163,7 +167,19 @@ export default function FeedPage() {
                 ) : posts.length > 0 ? (
                     <>
                         <div className="grid gap-4">
-                            {posts.map((post) => (
+                            {highlightPost && (
+                                <div className="mb-6 animate-in zoom-in-95 duration-500">
+                                    <h2 className="text-sm font-bold tracking-wider text-primary uppercase mb-2 flex items-center gap-2">
+                                        <RefreshCw className="h-4 w-4 animate-pulse" />
+                                        Urgent Nearby Activity
+                                    </h2>
+                                    <div className="ring-2 ring-primary/20 rounded-xl overflow-hidden shadow-lg shadow-primary/10">
+                                        <PostCard post={highlightPost} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {normalPosts.map((post) => (
                                 <div key={post.id} className="animate-in slide-in-from-bottom-4 duration-500 fade-in">
                                     <PostCard post={post} />
                                 </div>

@@ -1,71 +1,103 @@
-# Circle Of Life
+# 🌍 Circle of Life
 
-Circle of Life is a full-stack social feed and location-based discovery platform. It enables users to create posts for "Help" or "Meetups", view them in a chronologically sorted feed, and discover them geolocated on an interactive map.
+Circle of Life is a full-stack, location-based social feed and discovery platform. Built with a focus on geographic proximity, it enables users to seamlessly broadcast "Help" requests or organize "Meetups" with people immediately around them. 
 
-## Features
+The platform is engineered for modern performance, utilizing **PostGIS** for geospatial querying, **Redis** for robust caching and rate-limiting, and **Server-Sent Events (SSE)** for real-time feed updates.
 
-- **Authentication System**: Secure signup and login flow leveraging JWT and bcrypt.
-- **Social Feed**: View, create, and interact with posts in a beautifully designed feed environment.
-- **Interactive Map**: Discover nearby help requests and meetups using an integrated Mapbox-powered interface.
-- **Post Management**: Create formatted posts categorized as "Help" or "Meetup" with rich details including geospatial coordinates (latitude/longitude), titles, descriptions, and meetup times.
-- **Comment System**: Users can collaboratively engage with posts through an integrated real-time comment section.
+## 🚀 Key Features
 
-## Tech Stack
+### 📍 Location-Based Feed
+- **Geospatial Discovery:** Leverages PostgreSQL with PostGIS to accurately query, rank, and deliver posts within a user-defined radius (e.g., 5km).
+- **Ranking Algorithm:** Feed priority is dynamically calculated based on a decay formula weighing distance, time since creation, and post type (e.g., Help vs Meetup). 
+- **Nearby Highlight:** Hyper-local, urgent activity (under 500m) is automatically pinned to the top of the feed as an "Urgent Nearby Activity" card to encourage immediate community assistance.
+
+### ⚡ Real-Time & Optimistic UI
+- **Live Updates:** Integrated Server-Sent Events (SSE) backed by Redis Pub/Sub push real-time notifications to users when new posts are created nearby, ensuring the feed always feels alive.
+- **Optimistic Rendering:** Leveraging React Query, creating posts or comments updates the UI instantly before the server confirms the request, providing a snappy, app-like experience.
+
+### 🗺️ Interactive Map Visualization
+- **Mapbox Integration:** A fully interactive map view built with `react-map-gl`, plotting nearby posts as distinct markers so users can visually explore their surroundings.
+
+### 🛡️ Production-Ready Security & Polish
+- **Authentication:** Stateless, secure JWT-based authentication flow with bcrypt password hashing.
+- **Rate Limiting:** Granular, token-bucket user-level rate limiting (backed by Redis) prevents spam on post creation (5/min) and commenting (10/min).
+- **Input Sanitization:** Strict HTML and XSS sanitization applied server-side using `bluemonday` to prevent malicious payloads, coupled with tuned character length constraints.
+
+## 🛠️ Tech Stack
 
 ### Frontend (Next.js Application)
-Modern, responsive, and dynamic user interface built with:
-- **Framework**: [Next.js](https://nextjs.org/) (React 19)
-- **Styling & UI**: [Tailwind CSS](https://tailwindcss.com/) with Shadcn UI, Radix UI primitives, and Lucide React icons.
-- **State Management & Data Fetching**: [TanStack/React Query](https://tanstack.com/query/latest) and Axios.
-- **Forms & Validation**: `react-hook-form` organically combined with precise `zod` schema definitions.
-- **Mapping**: `mapbox-gl` and `react-map-gl` for immersive geospatial capabilities.
+A responsive, mobile-first web app built for modern UX.
+- **Framework:** Next.js (React 19) utilizing the App Router.
+- **Styling:** Tailwind CSS integrated with `shadcn/ui`, Radix UI primitives, and Lucide Icons.
+- **State & Data:** TanStack Query (React Query) for caching, optimistic updates, and infinite scrolling feeds.
+- **Forms:** `react-hook-form` paired with `zod` for rigorous client-side schema validation.
+- **Maps:** `mapbox-gl` for geospatial rendering.
 
-### Backend (Golang HTTP Server)
-Robust, high-performance Go API designed for seamless scalability:
-- **Framework**: [Gin](https://gin-gonic.com/) web framework handling routing and core middleware.
-- **Database**: Standardized on PostgreSQL (handling users, posts, and comments) queried utilizing `jackc/pgx`.
-- **Caching & Real-time**: Redis natively structured for caching and event streaming.
-- **Authentication**: JWT-based stateless authentication flow combined with Go's `crypto/bcrypt` algorithm.
-- **Data Validation**: Strict inputs enforced using `go-playground/validator`.
+### Backend (Golang HTTP API)
+A high-performance, Domain-Driven Design (DDD) Go backend.
+- **Framework:** Gin Web Framework for lightning-fast HTTP routing and middleware chaining.
+- **Database:** PostgreSQL utilizing `jackc/pgx` for connection pooling, featuring PostGIS extensions for spatial data.
+- **Caching & PubSub:** Redis for reducing database load (feed caching), rate limiting, and cross-node event broadcasting.
+- **Security:** `golang-jwt/jwt`, `crypto/bcrypt`, `bluemonday` for XSS protection, and `go-playground/validator`.
 
-## Project Structure
+## 📂 Project Structure
 
 The repository maintains a clean separation of concerns:
 
-- `/frontend`: Contains the complete Next.js application leveraging the `app` directory router.
-  - `/src/app`: Application pages structured into `feed`, `map`, `post`, `create`, `login`, and `signup`.
-  - `/src/components`: Reusable generic UI components and smart layout features.
-- `/backend`: Contains the extensive Golang REST API structured around Domain-Driven Design (DDD) concepts.
-  - `/internal`: Core business encapsulated logic, effectively separated into `services`, `handlers`, `models`, `repository`, and data `config`/`db` initialization.
+- `/frontend`
+  - `/src/app`: Application routes (`/feed`, `/map`, `/post`, `/create`, `/login`, `/signup`).
+  - `/src/components`: UI components, including the interactive map, feed cards, and layout elements.
+  - `/src/hooks`: Custom React hooks mapping complex logic (e.g., `useFeed`, `useRealtimeFeed`, `useLocation`).
+- `/backend`
+  - `/internal`: Core business logic, separated into `services`, `handlers`, `middleware`, `models`, and `repository` layers.
+  - `/cmd`: The entry point for the application (`cmd/server/main.go`).
 
-## Getting Started
+## 🏁 Getting Started
 
 ### Prerequisites
 - Node.js (v20+)
 - Go (v1.25.0+)
-- PostgreSQL 
-- Redis (Optional, dependent on local config)
+- PostgreSQL (with PostGIS extension installed)
+- Redis (Optional for local dev, required for caching/rate-limiting/real-time events)
 
-### Working Locally
+### Environment Configuration
 
-You will need to set up your `.env` files in both the frontend and backend directories:
-- **Frontend** requires connection secrets, including a valid *Mapbox API* token.
-- **Backend** requires a PostgreSQL connection string, a Redis connection layer, and a random JWT encryption secret.
+You will need to set up `.env` files in both directories:
 
-#### 1. Running the Frontend
-Navigate into the `/frontend` directory:
+**Frontend (`/frontend/.env.local`)**
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_public_token
+```
+
+**Backend (`/backend/.env`)**
+```env
+PORT=8080
+DATABASE_URL=postgres://user:password@localhost:5432/circleoflife?sslmode=disable
+REDIS_URL=redis://localhost:6379/0
+JWT_SECRET=your_super_secret_jwt_key
+```
+
+### 1. Running the Database
+Ensure PostgreSQL is running and the database `circleoflife` is created with the `postgis` extension enabled:
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
+
+### 2. Running the Backend
+Navigate to the `/backend` directory and start the Go server:
+```bash
+cd backend
+go mod tidy
+go run cmd/server/main.go
+```
+The API will be available at `http://localhost:8080`.
+
+### 3. Running the Frontend
+In a separate terminal, navigate to the `/frontend` directory:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The client app should spin up and be accessible locally at `http://localhost:3000`.
-
-#### 2. Running the Backend
-In a new terminal, navigate into the `/backend` directory:
-```bash
-cd backend
-go mod tidy
-go run main.go
-```
-The Go HTTP server will listen natively at `http://localhost:8080`.
+The client app will be accessible at `http://localhost:3000`.

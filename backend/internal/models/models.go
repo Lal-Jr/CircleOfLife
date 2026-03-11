@@ -34,6 +34,7 @@ type Post struct {
 	Author       string    `json:"author,omitempty"`
 	Distance     float64   `json:"distance,omitempty"`
 	CommentCount int       `json:"commentCount"`
+	Priority     string    `json:"priority,omitempty"`
 }
 
 type CreatePostInput struct {
@@ -56,5 +57,5 @@ type Comment struct {
 }
 
 type CreateCommentInput struct {
-	Content string `json:"content" validate:"required"`
+	Content string `json:"content" validate:"required,max=500"`
 }
