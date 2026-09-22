@@ -56,33 +56,6 @@ export function Navbar() {
                     </Button>
                 </div>
             </div>
-
-            {/* Mobile Bottom Navigation Bar */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background/90 backdrop-blur-md pb-safe">
-                <nav className="flex justify-around items-center h-16 px-2">
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
-                                    }`}
-                            >
-                                <item.icon className="h-5 w-5" />
-                                <span className="text-[10px] font-medium">{item.name}</span>
-                            </Link>
-                        );
-                    })}
-                    <button
-                        onClick={logout}
-                        className="flex flex-col items-center justify-center w-full h-full gap-1 text-muted-foreground hover:text-primary transition-colors"
-                    >
-                        <LogOut className="h-5 w-5" />
-                        <span className="text-[10px] font-medium">Logout</span>
-                    </button>
-                </nav>
-            </div>
         </header>
     );
 }

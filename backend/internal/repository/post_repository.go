@@ -48,6 +48,8 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 		SELECT 
 			p.id, p.user_id, p.title, p.description, p.type, p.meetup_time, p.created_at,
 			u.name AS author,
+			ST_Y(p.location::geometry) AS lat,
+			ST_X(p.location::geometry) AS lng,
 			ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance,
 			(SELECT count(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
 			(
@@ -84,9 +86,13 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 	var posts []models.Post
 	for rows.Next() {
 		var p models.Post
+		// The trailing `score` column drives ORDER BY only and isn't part of the
+		// API response, but pgx still requires a destination for every selected
+		// column, so it's scanned into a throwaway variable.
+		var score float64
 		err := rows.Scan(
 			&p.ID, &p.UserID, &p.Title, &p.Description, &p.Type, &p.MeetupTime, &p.CreatedAt,
-			&p.Author, &p.Distance, &p.CommentCount, &p.Priority,
+			&p.Author, &p.Lat, &p.Lng, &p.Distance, &p.CommentCount, &p.Priority, &score,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning post row: %v", err)
@@ -102,6 +108,8 @@ func (r *postRepository) GetPostByID(ctx context.Context, id string, lat, lng fl
 		SELECT 
 			p.id, p.user_id, p.title, p.description, p.type, p.meetup_time, p.created_at,
 			u.name AS author,
+			ST_Y(p.location::geometry) AS lat,
+			ST_X(p.location::geometry) AS lng,
 			ST_Distance(p.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance,
 			(SELECT count(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
 		FROM posts p
@@ -112,7 +120,7 @@ func (r *postRepository) GetPostByID(ctx context.Context, id string, lat, lng fl
 	var p models.Post
 	err := db.Pool.QueryRow(ctx, query, lng, lat, id).Scan(
 		&p.ID, &p.UserID, &p.Title, &p.Description, &p.Type, &p.MeetupTime, &p.CreatedAt,
-		&p.Author, &p.Distance, &p.CommentCount,
+		&p.Author, &p.Lat, &p.Lng, &p.Distance, &p.CommentCount,
 	)
 
 	if err != nil {

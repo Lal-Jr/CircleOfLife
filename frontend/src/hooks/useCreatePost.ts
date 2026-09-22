@@ -51,10 +51,13 @@ export function useCreatePost() {
                 return { ...oldData, pages: newPages };
             });
 
-            // Redirect immediately for perceived zero-latency UX
-            router.push("/feed");
-
             return { previousFeed };
+        },
+        onSuccess: () => {
+            // Only navigate away once the post is actually confirmed by the server,
+            // so a validation/network failure surfaces on the create page instead
+            // of silently vanishing after the user already left it.
+            router.push("/feed");
         },
         onError: (err, newPost, context) => {
             if (context?.previousFeed) {

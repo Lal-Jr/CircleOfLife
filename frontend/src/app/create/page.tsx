@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLocation } from "@/hooks/useLocation";
 import { useCreatePost } from "@/hooks/useCreatePost";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ArrowLeft, Compass, Send, Calendar, Clock } from "lucide-react";
 import Link from "next/link";
 
@@ -14,8 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function CreatePostPage() {
+    const { isAuthChecked } = useRequireAuth();
     const { lat, lng, error: locationError, loading: locationLoading } = useLocation();
-    const { createPost, isCreating } = useCreatePost();
+    const { createPost, isCreating, error: createError } = useCreatePost();
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -43,7 +45,12 @@ export default function CreatePostPage() {
     };
 
     const isLocationReady = lat !== null && lng !== null;
-    const isFormValid = title.trim() && description.trim() && (type === "help" || (type === "meetup" && date && time));
+    const isFormValid =
+        title.trim().length >= 5 &&
+        description.trim().length >= 10 &&
+        (type === "help" || (type === "meetup" && date && time));
+
+    if (!isAuthChecked) return null;
 
     return (
         <div className="container max-w-2xl mx-auto px-4 py-8 animate-in fade-in zoom-in-95 duration-500">
@@ -101,6 +108,7 @@ export default function CreatePostPage() {
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     className="bg-background focus-visible:ring-primary/50 h-11 transition-all"
+                                    minLength={5}
                                     maxLength={60}
                                     required
                                 />
@@ -115,6 +123,7 @@ export default function CreatePostPage() {
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     className="bg-background focus-visible:ring-primary/50 min-h-[120px] resize-none transition-all p-3"
+                                    minLength={10}
                                     maxLength={500}
                                     required
                                 />
@@ -145,6 +154,12 @@ export default function CreatePostPage() {
                                             required={type === "meetup"}
                                         />
                                     </div>
+                                </div>
+                            )}
+
+                            {createError && (
+                                <div className="p-3 text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
+                                    Could not create your post. Please check your details and try again.
                                 </div>
                             )}
 

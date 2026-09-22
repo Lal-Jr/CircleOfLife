@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "./useAuth";
 
 export function useRealtimeFeed() {
     const [hasNewPosts, setHasNewPosts] = useState(false);
-    const { token } = useAuth();
     const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
     useEffect(() => {
+        const token = localStorage.getItem("jwt_token");
         if (!token) return;
 
         // We pass the token via query param because EventSource does not inherently support Custom Headers out of the box in browsers.
@@ -33,7 +32,7 @@ export function useRealtimeFeed() {
         return () => {
             eventSource.close();
         };
-    }, [baseURL, token]);
+    }, [baseURL]);
 
     const clearNewPosts = () => {
         setHasNewPosts(false);

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"circleoflife/internal/models"
@@ -51,6 +52,7 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 	}
 
 	if err := h.commentService.CreateComment(c.Request.Context(), &comment); err != nil {
+		log.Printf("create comment failed: %v", err)
 		utils.JSONError(c, http.StatusInternalServerError, "Failed to post comment")
 		return
 	}
@@ -63,6 +65,7 @@ func (h *CommentHandler) GetComments(c *gin.Context) {
 
 	comments, err := h.commentService.GetCommentsByPostID(c.Request.Context(), postID)
 	if err != nil {
+		log.Printf("get comments failed: %v", err)
 		utils.JSONError(c, http.StatusInternalServerError, "Failed to retrieve comments")
 		return
 	}

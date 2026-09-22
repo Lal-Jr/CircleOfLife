@@ -1,0 +1,41 @@
+services:
+  db:
+    image: docker.io/postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: circle
+      POSTGRES_PASSWORD: circle
+      POSTGRES_DB: circleoflife
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U circle -d circleoflife"]
+      interval: 3s
+      retries: 20
+  redis:
+    image: docker.io/library/redis:7-alpine
+  backend:
+    build: ./backend
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://circle:circle@db:5432/circleoflife?sslmode=disable
+      REDIS_URL: redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8080:8080"
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080/api
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+    depends_on:
+      - backend
+    ports:
+      - "3100:3000"
+volumes:
+  pgdata:

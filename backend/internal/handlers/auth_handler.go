@@ -83,3 +83,19 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
+
+func (h *AuthHandler) Me(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		utils.JSONError(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	user, err := h.authService.GetProfile(c.Request.Context(), userID.(string))
+	if err != nil {
+		utils.JSONError(c, http.StatusNotFound, "User not found")
+		return
+	}
+
+	c.JSON(http.StatusOK, models.APIResponse{Data: user})
+}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useFeed } from "@/hooks/useFeed";
 import { useLocation } from "@/hooks/useLocation";
 import { useRealtimeFeed } from "@/hooks/useRealtimeFeed";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Compass, MapPinOff, PlusCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +37,7 @@ function FeedSkeleton() {
 }
 
 export default function FeedPage() {
+    const { isAuthChecked } = useRequireAuth();
     const [radius, setRadius] = useState("5");
     const { lat, lng, error: locationError, loading: locationLoading } = useLocation();
 
@@ -96,6 +98,8 @@ export default function FeedPage() {
     // Separate the high priority nearby highlight from the rest of the feed
     const highlightPost = posts.find(p => p.priority === "high");
     const normalPosts = highlightPost ? posts.filter(p => p.id !== highlightPost.id) : posts;
+
+    if (!isAuthChecked) return null;
 
     return (
         <div

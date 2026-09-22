@@ -35,13 +35,23 @@ func ValidateToken(tokenString, secret string) (string, error) {
 		return []byte(secret), nil
 	})
 
-	if err != nil || !token.Valid {
+	if err != nil {
 		return "", errors.New("invalid or expired token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return "", errors.New("invalid token claims")
+	}
+
+	// Check expiration manually
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return "", errors.New("invalid token expiration")
+	}
+	
+	if time.Now().Unix() > int64(exp) {
+		return "", errors.New("invalid or expired token")
 	}
 
 	userID, ok := claims["sub"].(string)

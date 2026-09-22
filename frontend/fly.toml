@@ -1,0 +1,20 @@
+app = "circleoflife-web"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+  [build.args]
+    NEXT_PUBLIC_API_URL = "https://circleoflife-api.fly.dev/api"
+    # NEXT_PUBLIC_MAPBOX_TOKEN is passed at deploy time: --build-arg NEXT_PUBLIC_MAPBOX_TOKEN=pk...
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

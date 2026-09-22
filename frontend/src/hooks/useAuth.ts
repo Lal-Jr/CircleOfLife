@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-// import { api } from "@/lib/api"; // For future backend integration
+import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export function useAuth() {
@@ -7,14 +7,8 @@ export function useAuth() {
 
     const loginMutation = useMutation({
         mutationFn: async (credentials: any) => {
-            // Mock API call
-            // const response = await api.post("/auth/login", credentials);
-            // return response.data;
-
-            console.log("Mock login for:", credentials.email);
-            // Simulate network delay
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            return { token: "mock_jwt_token_12345" };
+            const response = await api.post("/auth/login", credentials);
+            return response.data as { token: string };
         },
         onSuccess: (data) => {
             if (typeof window !== "undefined") {
@@ -26,13 +20,8 @@ export function useAuth() {
 
     const signupMutation = useMutation({
         mutationFn: async (userData: any) => {
-            // Mock API call
-            // const response = await api.post("/auth/signup", userData);
-            // return response.data;
-
-            console.log("Mock signup for:", userData.email);
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            return { token: "mock_jwt_token_12345" };
+            const response = await api.post("/auth/signup", userData);
+            return response.data as { token: string };
         },
         onSuccess: (data) => {
             if (typeof window !== "undefined") {

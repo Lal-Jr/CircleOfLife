@@ -12,6 +12,7 @@ import (
 type AuthService interface {
 	Signup(ctx context.Context, req models.User) (string, error)
 	Login(ctx context.Context, email, password string) (string, error)
+	GetProfile(ctx context.Context, userID string) (*models.User, error)
 }
 
 type authService struct {
@@ -64,4 +65,13 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 	}
 
 	return token, nil
+}
+
+func (s *authService) GetProfile(ctx context.Context, userID string) (*models.User, error) {
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	return user, nil
 }

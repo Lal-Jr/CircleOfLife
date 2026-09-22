@@ -85,6 +85,9 @@ func main() {
 	// Real-time Event Stream (SSE)
 	protected.GET("/events", handlers.HandleEvents)
 
+	// Current authenticated user's profile
+	protected.GET("/users/me", authHandler.Me)
+
 	// Posts API (Max 60 lookups/min on general feed)
 	posts := protected.Group("/posts")
 	posts.Use(middleware.RateLimitMiddleware(60, time.Minute))

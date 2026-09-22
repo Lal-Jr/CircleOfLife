@@ -2,6 +2,7 @@
 
 import { usePost } from "@/hooks/usePost";
 import { useLocation } from "@/hooks/useLocation";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistance, formatTimeAgo } from "@/lib/utils";
 import { CommentList } from "@/components/CommentList";
@@ -15,13 +16,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function PostDetailPage() {
+    const { isAuthChecked } = useRequireAuth();
     const params = useParams();
     const id = params.id as string;
     const router = useRouter();
 
-    // Technically we already have lat/lng but usePost doesn't necessarily need it to fetch down if the backend handles distance or if we compute it. 
-    // Let's assume the API already returns the distance from coordinate headers/params on global state or similar, per specs.
-    const { post, isLoading, error } = usePost(id);
+    const { lat, lng } = useLocation();
+    const { post, isLoading, error } = usePost(id, lat, lng);
+
+    if (!isAuthChecked) return null;
 
     if (isLoading) {
         return (

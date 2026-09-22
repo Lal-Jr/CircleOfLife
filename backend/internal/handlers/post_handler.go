@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -54,6 +55,7 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 	}
 
 	if err := h.postService.CreatePost(c.Request.Context(), &post, req.Lat, req.Lng); err != nil {
+		log.Printf("create post failed: %v", err)
 		utils.JSONError(c, http.StatusInternalServerError, "Failed to create post")
 		return
 	}
@@ -89,6 +91,7 @@ func (h *PostHandler) GetNearbyPosts(c *gin.Context) {
 
 	posts, err := h.postService.GetNearbyPosts(c.Request.Context(), lat, lng, radius, page, limit)
 	if err != nil {
+		log.Printf("get nearby posts failed: %v", err)
 		utils.JSONError(c, http.StatusInternalServerError, "Failed to fetch nearby posts")
 		return
 	}

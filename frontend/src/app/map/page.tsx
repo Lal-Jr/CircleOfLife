@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLocation } from "@/hooks/useLocation";
 import { useFeed } from "@/hooks/useFeed";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { RadiusSelector } from "@/components/RadiusSelector";
 import { MapView } from "@/components/MapView";
 import { MapPinOff, Compass, List } from "lucide-react";
@@ -10,9 +11,12 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default function MapPage() {
+    const { isAuthChecked } = useRequireAuth();
     const [radius, setRadius] = useState("5");
     const { lat, lng, error: locationError, loading: locationLoading } = useLocation();
     const { posts, isLoading: feedLoading, error: feedError } = useFeed(lat, lng, parseInt(radius));
+
+    if (!isAuthChecked) return null;
 
     return (
         <div className="container max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500">

@@ -23,3 +23,21 @@ api.interceptors.request.use(
         return Promise.reject(error);
     }
 );
+
+// If the token is missing/expired/invalid, clear it and send the user back to login
+// instead of leaving every page stuck on a generic error state.
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (
+            typeof window !== "undefined" &&
+            error.response?.status === 401 &&
+            !window.location.pathname.startsWith("/login") &&
+            !window.location.pathname.startsWith("/signup")
+        ) {
+            localStorage.removeItem("jwt_token");
+            window.location.href = "/login";
+        }
+        return Promise.reject(error);
+    }
+);

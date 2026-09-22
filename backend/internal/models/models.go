@@ -32,6 +32,8 @@ type Post struct {
 	
 	// Appended fields used in API responses
 	Author       string    `json:"author,omitempty"`
+	Lat          float64   `json:"lat"`
+	Lng          float64   `json:"lng"`
 	Distance     float64   `json:"distance,omitempty"`
 	CommentCount int       `json:"commentCount"`
 	Priority     string    `json:"priority,omitempty"`
