@@ -30,7 +30,15 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 			endpoint = c.Request.URL.Path
 		}
 
-		key := fmt.Sprintf("ratelimit:%s:%s", identifier, endpoint)
+		// c.FullPath() returns the same route pattern regardless of which
+		// middleware in the chain reads it (it doesn't vary by HTTP method
+		// either), so a broad group-level limiter and a stricter per-route
+		// limiter stacked on the same route would otherwise collide on one
+		// shared key: every request then increments both counters, and the
+		// stricter one trips long before its real limit. Namespacing the key
+		// by this middleware's own (method, limit, window) keeps every
+		// configured limiter's counter independent.
+		key := fmt.Sprintf("ratelimit:%s:%s:%s:%d:%s", identifier, c.Request.Method, endpoint, limit, window)
 
 		count, err := cache.Client.Incr(context.Background(), key).Result()
 		if err != nil {

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { Comment } from "@/types/comment";
 
 export function useCreateComment() {
     const queryClient = useQueryClient();
@@ -13,11 +14,12 @@ export function useCreateComment() {
             await queryClient.cancelQueries({ queryKey: ["comments", newComment.postId] });
             const previousComments = queryClient.getQueryData(["comments", newComment.postId]);
 
-            queryClient.setQueryData(["comments", newComment.postId], (old: any) => {
-                const optimisticComment = {
+            queryClient.setQueryData(["comments", newComment.postId], (old: Comment[] | undefined) => {
+                const optimisticComment: Comment = {
                     id: `temp-${Date.now()}`,
                     postId: newComment.postId,
-                    author: "You",
+                    authorId: "me",
+                    authorName: "You",
                     authorAvatar: "",
                     content: newComment.content,
                     createdAt: new Date().toISOString(),
@@ -35,6 +37,9 @@ export function useCreateComment() {
         onSettled: (data, error, variables) => {
             queryClient.invalidateQueries({ queryKey: ["comments", variables.postId] });
             queryClient.invalidateQueries({ queryKey: ["post", variables.postId] });
+            // The feed's post cards also show commentCount, so they'd otherwise
+            // go stale until the query's own staleTime elapses.
+            queryClient.invalidateQueries({ queryKey: ["feed"] });
         },
     });
 

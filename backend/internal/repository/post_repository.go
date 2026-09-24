@@ -80,7 +80,10 @@ func (r *postRepository) GetNearbyPosts(ctx context.Context, lat, lng float64, r
 		LIMIT $4 OFFSET $5;
 	`
 
-	rows, err := db.Pool.Query(ctx, query, lng, lat, radiusMeters, limit, offset, viewerID)
+	// Fetch one extra row so the caller can tell whether another page exists
+	// without relying on "did this page come back full", which is wrong
+	// whenever the total count happens to be an exact multiple of the page size.
+	rows, err := db.Pool.Query(ctx, query, lng, lat, radiusMeters, limit+1, offset, viewerID)
 	if err != nil {
 		return nil, fmt.Errorf("error querying nearby posts: %v", err)
 	}

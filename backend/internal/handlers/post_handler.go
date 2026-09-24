@@ -104,7 +104,13 @@ func (h *PostHandler) GetNearbyPosts(c *gin.Context) {
 		posts = []models.Post{}
 	}
 
-	hasNext := len(posts) == limit
+	// The repo fetched one extra row (limit+1) precisely so this doesn't have
+	// to guess "did this page come back full" - which is wrong whenever the
+	// true total is an exact multiple of the page size.
+	hasNext := len(posts) > limit
+	if hasNext {
+		posts = posts[:limit]
+	}
 	c.JSON(http.StatusOK, models.APIResponse{
 		Data: posts,
 		Meta: &models.PaginatedMeta{
