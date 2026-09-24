@@ -1,8 +1,9 @@
 import { Post } from "@/types/post";
-import { formatDistance, formatTimeAgo } from "@/lib/utils";
-import { MessageSquare, MapPin, Share2, ThumbsUp } from "lucide-react";
+import { formatDistance, formatTimeAgo, cn } from "@/lib/utils";
+import { MessageSquare, MapPin, Share2, ThumbsUp, Check } from "lucide-react";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
+import { useToggleHelpful } from "@/hooks/useToggleHelpful";
 
 import {
     Card,
@@ -22,6 +23,33 @@ interface PostCardProps {
 export const PostCard = React.memo(({ post, onClick }: PostCardProps) => {
     const isHelp = post.type === "help";
     const formattedDate = formatTimeAgo(post.createdAt);
+    const { toggleHelpful, isToggling } = useToggleHelpful();
+    const [justShared, setJustShared] = useState(false);
+
+    const handleHelpful = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isToggling) return;
+        toggleHelpful(post.id);
+    };
+
+    const handleShare = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const shareUrl = `${window.location.origin}/post/${post.id}`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: post.title, text: post.description, url: shareUrl });
+                return;
+            }
+            await navigator.clipboard.writeText(shareUrl);
+            setJustShared(true);
+            setTimeout(() => setJustShared(false), 2000);
+        } catch {
+            // User cancelled the native share sheet, or clipboard access was denied - no action needed.
+        }
+    };
 
     return (
         <Card
@@ -75,9 +103,21 @@ export const PostCard = React.memo(({ post, onClick }: PostCardProps) => {
                 </CardContent>
 
                 <CardFooter className="p-2 pt-2 border-t flex items-center justify-between mt-auto bg-muted/5 gap-1">
-                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-primary hover:bg-primary/10 h-9 gap-1.5 rounded-md" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                        <ThumbsUp className="h-4 w-4" />
-                        <span className="text-xs font-medium">Helpful</span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                            "flex-1 h-9 gap-1.5 rounded-md",
+                            post.likedByMe
+                                ? "text-primary bg-primary/10 hover:bg-primary/15"
+                                : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        )}
+                        onClick={handleHelpful}
+                    >
+                        <ThumbsUp className={cn("h-4 w-4", post.likedByMe && "fill-current")} />
+                        <span className="text-xs font-medium">
+                            {post.helpfulCount > 0 ? post.helpfulCount : ""} <span className={post.helpfulCount > 0 ? "hidden sm:inline" : ""}>Helpful</span>
+                        </span>
                     </Button>
                     <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-primary hover:bg-primary/10 h-9 gap-1.5 rounded-md" asChild>
                         <div className="flex items-center pointer-events-none">
@@ -85,9 +125,14 @@ export const PostCard = React.memo(({ post, onClick }: PostCardProps) => {
                             <span className="text-xs font-medium">{post.commentCount} <span className="hidden sm:inline">Comments</span></span>
                         </div>
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-primary hover:bg-primary/10 h-9 gap-1.5 rounded-md" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                        <Share2 className="h-4 w-4" />
-                        <span className="text-xs font-medium">Share</span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 text-muted-foreground hover:text-primary hover:bg-primary/10 h-9 gap-1.5 rounded-md"
+                        onClick={handleShare}
+                    >
+                        {justShared ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                        <span className="text-xs font-medium">{justShared ? "Copied!" : "Share"}</span>
                     </Button>
                 </CardFooter>
             </Link>

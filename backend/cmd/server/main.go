@@ -96,6 +96,7 @@ func main() {
 		// Creation throttled tighter (5/min)
 		posts.POST("", middleware.RateLimitMiddleware(5, time.Minute), postHandler.CreatePost)
 		posts.GET("/:id", postHandler.GetPostByID)
+		posts.POST("/:id/like", middleware.RateLimitMiddleware(30, time.Minute), postHandler.ToggleLike)
 
 		// Nested Comments (10/min limit per user to prevent spam)
 		posts.GET("/:id/comments", commentHandler.GetComments)

@@ -6,6 +6,7 @@ import { useCreatePost } from "@/hooks/useCreatePost";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ArrowLeft, Compass, Send, Calendar, Clock } from "lucide-react";
 import Link from "next/link";
+import { getErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,7 +160,7 @@ export default function CreatePostPage() {
 
                             {createError && (
                                 <div className="p-3 text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
-                                    Could not create your post. Please check your details and try again.
+                                    {getErrorMessage(createError, "Could not create your post. Please check your details and try again.")}
                                 </div>
                             )}
 

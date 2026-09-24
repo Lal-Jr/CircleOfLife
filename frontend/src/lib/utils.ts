@@ -20,3 +20,11 @@ export function formatTimeAgo(dateString: string): string {
     return "just now"
   }
 }
+
+// Pulls the backend's { error: "..." } message out of an axios error so the
+// UI can show the real reason (wrong password, duplicate email, rate limit,
+// validation failure) instead of failing silently.
+export function getErrorMessage(err: unknown, fallback = "Something went wrong. Please try again."): string {
+  const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+  return message || fallback
+}

@@ -36,6 +36,8 @@ export function useCreatePost() {
                     authorAvatar: "",
                     distance: 0,
                     commentCount: 0,
+                    helpfulCount: 0,
+                    likedByMe: false,
                     createdAt: new Date().toISOString(),
                     meetupTime: newPost.meetupTime
                 };

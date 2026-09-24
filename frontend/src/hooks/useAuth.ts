@@ -41,8 +41,10 @@ export function useAuth() {
     return {
         login: loginMutation.mutate,
         isLoggingIn: loginMutation.isPending,
+        loginError: loginMutation.error,
         signup: signupMutation.mutate,
         isSigningUp: signupMutation.isPending,
+        signupError: signupMutation.error,
         logout,
     };
 }

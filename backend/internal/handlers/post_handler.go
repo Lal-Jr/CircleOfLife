@@ -89,7 +89,10 @@ func (h *PostHandler) GetNearbyPosts(c *gin.Context) {
 		return
 	}
 
-	posts, err := h.postService.GetNearbyPosts(c.Request.Context(), lat, lng, radius, page, limit)
+	userID, _ := c.Get("userID")
+	viewerID, _ := userID.(string)
+
+	posts, err := h.postService.GetNearbyPosts(c.Request.Context(), lat, lng, radius, page, limit, viewerID)
 	if err != nil {
 		log.Printf("get nearby posts failed: %v", err)
 		utils.JSONError(c, http.StatusInternalServerError, "Failed to fetch nearby posts")
@@ -122,11 +125,32 @@ func (h *PostHandler) GetPostByID(c *gin.Context) {
 	lat, _ := strconv.ParseFloat(latStr, 64)
 	lng, _ := strconv.ParseFloat(lngStr, 64)
 
-	post, err := h.postService.GetPostByID(c.Request.Context(), id, lat, lng)
+	userID, _ := c.Get("userID")
+	viewerID, _ := userID.(string)
+
+	post, err := h.postService.GetPostByID(c.Request.Context(), id, lat, lng, viewerID)
 	if err != nil {
 		utils.JSONError(c, http.StatusNotFound, "Post not found")
 		return
 	}
 
 	c.JSON(http.StatusOK, models.APIResponse{Data: post})
+}
+
+func (h *PostHandler) ToggleLike(c *gin.Context) {
+	postID := c.Param("id")
+	userID, exists := c.Get("userID")
+	if !exists {
+		utils.JSONError(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	liked, count, err := h.postService.ToggleLike(c.Request.Context(), postID, userID.(string))
+	if err != nil {
+		log.Printf("toggle like failed: %v", err)
+		utils.JSONError(c, http.StatusInternalServerError, "Failed to update helpful vote")
+		return
+	}
+
+	c.JSON(http.StatusOK, models.APIResponse{Data: models.LikeResponse{Liked: liked, HelpfulCount: count}})
 }

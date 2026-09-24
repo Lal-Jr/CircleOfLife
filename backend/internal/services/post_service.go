@@ -15,8 +15,9 @@ import (
 
 type PostService interface {
 	CreatePost(ctx context.Context, p *models.Post, lat, lng float64) error
-	GetNearbyPosts(ctx context.Context, lat, lng float64, radius, page, limit int) ([]models.Post, error)
-	GetPostByID(ctx context.Context, id string, lat, lng float64) (*models.Post, error)
+	GetNearbyPosts(ctx context.Context, lat, lng float64, radius, page, limit int, viewerID string) ([]models.Post, error)
+	GetPostByID(ctx context.Context, id string, lat, lng float64, viewerID string) (*models.Post, error)
+	ToggleLike(ctx context.Context, postID, userID string) (liked bool, helpfulCount int, err error)
 }
 
 type postService struct {
@@ -31,11 +32,14 @@ func (s *postService) CreatePost(ctx context.Context, p *models.Post, lat, lng f
 	return s.repo.CreatePost(ctx, p, lat, lng)
 }
 
-func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radius, page, limit int) ([]models.Post, error) {
-	// 1. Generate Cache Key using geographic buckets (rounded to 2 decimal places) and pagination boundaries
+func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radius, page, limit int, viewerID string) ([]models.Post, error) {
+	// 1. Generate Cache Key using geographic buckets (rounded to 2 decimal places) and pagination boundaries.
+	// The viewer is part of the key because each post now carries a per-viewer
+	// `likedByMe` flag - without this, one user's "liked" state could leak into
+	// another nearby user's cached feed.
 	latBucket := math.Round(lat*100) / 100
 	lngBucket := math.Round(lng*100) / 100
-	cacheKey := fmt.Sprintf("feed:%.2f:%.2f:%d:%d:%d", latBucket, lngBucket, radius, page, limit)
+	cacheKey := fmt.Sprintf("feed:%.2f:%.2f:%d:%d:%d:%s", latBucket, lngBucket, radius, page, limit, viewerID)
 
 	// 2. Check for Cache Hit if Redis is available
 	if cache.Client != nil {
@@ -79,7 +83,7 @@ func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radi
 	}
 
 	// 4. Fallback to Database Query natively via Repository PostGIS bounds
-	posts, err := s.repo.GetNearbyPosts(ctx, lat, lng, radius, page, limit)
+	posts, err := s.repo.GetNearbyPosts(ctx, lat, lng, radius, page, limit, viewerID)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +106,10 @@ func (s *postService) GetNearbyPosts(ctx context.Context, lat, lng float64, radi
 	return posts, nil
 }
 
-func (s *postService) GetPostByID(ctx context.Context, id string, lat, lng float64) (*models.Post, error) {
-	return s.repo.GetPostByID(ctx, id, lat, lng)
+func (s *postService) GetPostByID(ctx context.Context, id string, lat, lng float64, viewerID string) (*models.Post, error) {
+	return s.repo.GetPostByID(ctx, id, lat, lng, viewerID)
+}
+
+func (s *postService) ToggleLike(ctx context.Context, postID, userID string) (bool, int, error) {
+	return s.repo.ToggleLike(ctx, postID, userID)
 }

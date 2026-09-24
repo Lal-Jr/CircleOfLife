@@ -36,7 +36,14 @@ type Post struct {
 	Lng          float64   `json:"lng"`
 	Distance     float64   `json:"distance,omitempty"`
 	CommentCount int       `json:"commentCount"`
+	HelpfulCount int       `json:"helpfulCount"`
+	LikedByMe    bool      `json:"likedByMe"`
 	Priority     string    `json:"priority,omitempty"`
+}
+
+type LikeResponse struct {
+	Liked        bool `json:"liked"`
+	HelpfulCount int  `json:"helpfulCount"`
 }
 
 type CreatePostInput struct {

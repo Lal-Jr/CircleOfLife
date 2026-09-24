@@ -6,6 +6,8 @@ export interface Post {
     distance: number; // in meters returned from backend
     type: "help" | "meetup";
     commentCount: number;
+    helpfulCount: number;
+    likedByMe: boolean;
     createdAt: string;
     authorAvatar?: string;
     lat?: number;

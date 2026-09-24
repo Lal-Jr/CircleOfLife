@@ -89,6 +89,18 @@ func RunMigrations() error {
 		return fmt.Errorf("failed creating comments table: %v", err)
 	}
 
+	// 5. Post Likes ("Helpful" votes) - one vote per user per post
+	_, err = Pool.Exec(ctx, `
+	CREATE TABLE IF NOT EXISTS post_likes (
+		post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+		user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (post_id, user_id)
+	);`)
+	if err != nil {
+		return fmt.Errorf("failed creating post_likes table: %v", err)
+	}
+
 	fmt.Println("Database migrations applied successfully, PostGIS ready.")
 	return nil
 }

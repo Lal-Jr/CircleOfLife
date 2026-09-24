@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { MapPin, Mail, Lock, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { getErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const { login, isLoggingIn } = useAuth();
+    const { login, isLoggingIn, loginError } = useAuth();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,6 +41,11 @@ export default function LoginPage() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {loginError && (
+                                <div className="p-3 text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+                                    {getErrorMessage(loginError, "Invalid email or password.")}
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="font-semibold">Email address</Label>
                                 <div className="relative">

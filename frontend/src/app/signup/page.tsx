@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { MapPin, User, Mail, Lock, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { getErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ export default function SignupPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
 
-    const { signup, isSigningUp } = useAuth();
+    const { signup, isSigningUp, signupError } = useAuth();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,8 +29,15 @@ export default function SignupPage() {
             return;
         }
 
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters");
+            return;
+        }
+
         signup({ name, email, password });
     };
+
+    const displayedError = error || (signupError ? getErrorMessage(signupError, "Could not create your account. Please try again.") : "");
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4 py-8">
@@ -50,9 +58,9 @@ export default function SignupPage() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            {error && (
+                            {displayedError && (
                                 <div className="p-3 text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-                                    {error}
+                                    {displayedError}
                                 </div>
                             )}
 
@@ -96,6 +104,7 @@ export default function SignupPage() {
                                         type="password"
                                         className="pl-9 h-10 transition-all focus-visible:ring-primary/50"
                                         required
+                                        minLength={6}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                     />
@@ -111,6 +120,7 @@ export default function SignupPage() {
                                         type="password"
                                         className="pl-9 h-10 transition-all focus-visible:ring-primary/50"
                                         required
+                                        minLength={6}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                     />

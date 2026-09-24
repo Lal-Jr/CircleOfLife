@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useComments } from "@/hooks/useComments";
 import { useCreateComment } from "@/hooks/useCreateComment";
-import { formatTimeAgo } from "@/lib/utils";
+import { formatTimeAgo, getErrorMessage } from "@/lib/utils";
 import { Send, Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 
 export function CommentList({ postId }: { postId: string }) {
     const { comments, isLoading, error } = useComments(postId);
-    const { createComment, isCreating } = useCreateComment();
+    const { createComment, isCreating, error: createCommentError } = useCreateComment();
     const [content, setContent] = useState("");
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -78,6 +78,12 @@ export function CommentList({ postId }: { postId: string }) {
                     </div>
                 )}
             </div>
+
+            {createCommentError && (
+                <div className="text-xs text-destructive text-center py-2 mb-2 bg-destructive/10 rounded-lg">
+                    {getErrorMessage(createCommentError, "Could not post your comment. Please try again.")}
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="flex gap-2">
                 <Input
