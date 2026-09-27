@@ -19,12 +19,20 @@ func NewCommentRepository() CommentRepository {
 }
 
 func (r *commentRepository) CreateComment(ctx context.Context, c *models.Comment) error {
+	// Joins in the author's name in the same round-trip, so the response to a
+	// comment post matches the shape GetCommentsByPostID returns instead of
+	// coming back with an empty authorName.
 	query := `
-		INSERT INTO comments (post_id, user_id, content) 
-		VALUES ($1, $2, $3) 
-		RETURNING id, created_at`
-	
-	err := db.Pool.QueryRow(ctx, query, c.PostID, c.UserID, c.Content).Scan(&c.ID, &c.CreatedAt)
+		WITH inserted AS (
+			INSERT INTO comments (post_id, user_id, content)
+			VALUES ($1, $2, $3)
+			RETURNING id, user_id, created_at
+		)
+		SELECT inserted.id, inserted.created_at, u.name
+		FROM inserted
+		JOIN users u ON u.id = inserted.user_id`
+
+	err := db.Pool.QueryRow(ctx, query, c.PostID, c.UserID, c.Content).Scan(&c.ID, &c.CreatedAt, &c.AuthorName)
 	return err
 }
 

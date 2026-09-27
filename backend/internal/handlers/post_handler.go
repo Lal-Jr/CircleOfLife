@@ -52,6 +52,12 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		Description: p.Sanitize(req.Description),
 		Type:        req.Type,
 		MeetupTime:  req.MeetupTime,
+		// The DB stores this as a PostGIS geography point rather than plain
+		// columns, so it isn't populated by CreatePost's RETURNING clause -
+		// set it directly from the request so the response is accurate
+		// instead of silently reporting (0, 0).
+		Lat: req.Lat,
+		Lng: req.Lng,
 	}
 
 	if err := h.postService.CreatePost(c.Request.Context(), &post, req.Lat, req.Lng); err != nil {
