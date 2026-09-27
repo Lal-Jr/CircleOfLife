@@ -4,6 +4,41 @@ Circle of Life is a full-stack, location-based social feed and discovery platfor
 
 The platform is engineered for modern performance, utilizing **PostGIS** for geospatial querying, **Redis** for robust caching and rate-limiting, and **Server-Sent Events (SSE)** for real-time feed updates.
 
+## 🔗 Live Demo
+
+**[circleoflife-web.fly.dev](https://circleoflife-web.fly.dev)**. Click **"Try the demo account"** on the login page and you're in, with no sign-up.
+
+| | |
+|---|---|
+| Email | `demo@circleoflife.app` |
+| Password | `CircleDemo123!` |
+
+The demo is set in central Bangalore. Allow location access, or set your browser's location to around `12.97, 77.59`, to see the sample neighbourhood. If you're elsewhere, create a post and it appears on your own feed straight away.
+
+![Demo: one-click login, the nearby feed, a comment thread, the map and creating a post](docs/screenshots/demo.gif)
+
+### Screenshots
+
+| Nearby feed | Activity map |
+|---|---|
+| ![Nearby feed](docs/screenshots/feed.png) | ![Activity map](docs/screenshots/map.png) |
+| **Post and comment thread** | **Create a post** |
+| ![Post detail](docs/screenshots/post-detail.png) | ![Create post](docs/screenshots/create-post.png) |
+| **Login with one-click demo** | **Profile** |
+| ![Login](docs/screenshots/login.png) | ![Profile](docs/screenshots/profile.png) |
+
+<p align="center"><img src="docs/screenshots/mobile-feed.png" alt="Mobile feed" width="300" /><br/><em>Mobile layout with bottom navigation</em></p>
+
+### Sample data
+
+On first startup the backend seeds a small neighbourhood so the app never looks empty ([`backend/internal/db/seed.go`](backend/internal/db/seed.go)). Seeding is idempotent and runs in a single transaction:
+
+- **The demo account** with two posts of its own: a help request and a meetup.
+- **Five neighbours** (Priya, Arjun, Meera, Rahul and Ananya) with 10 posts spread across 0.5 to 2.5 km. The help requests cover a flat car battery, a medicine pickup, a lost dog and tech help for a grandparent. The meetups include a 5K run, a book swap, a garden day, a cricket match and a coding group, each with an upcoming time.
+- **Comment threads and Helpful votes** between the neighbours and the demo user, so post pages show real conversations.
+
+Neighbour accounts can't be logged into; only the demo account has a usable password.
+
 ## 🚀 Key Features
 
 ### 📍 Location-Based Feed
@@ -101,3 +136,24 @@ npm install
 npm run dev
 ```
 The client app will be accessible at `http://localhost:3000`.
+
+On first run the backend creates the tables, enables PostGIS and seeds the demo account and sample neighbourhood. Sign in with `demo@circleoflife.app` / `CircleDemo123!`.
+
+Alternatively, `docker compose up --build` starts PostGIS, Redis, the API and the frontend (on `http://localhost:3100`).
+
+## ☁️ Deployment
+
+The live demo runs on **Fly.io** (region `sin`) with **Supabase** Postgres, which has PostGIS built in:
+
+```bash
+# API
+cd backend
+fly secrets set -a circleoflife-api DATABASE_URL='postgresql://…:5432/postgres?sslmode=require' JWT_SECRET='…'
+fly deploy
+
+# Web: the API URL and Mapbox token are baked in at build time
+cd ../frontend
+fly deploy --build-arg NEXT_PUBLIC_MAPBOX_TOKEN=pk.…
+```
+
+`REDIS_URL` is optional. Without it, caching and rate limiting are skipped and live SSE updates are off, but everything else works.

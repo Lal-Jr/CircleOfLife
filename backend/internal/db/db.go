@@ -113,8 +113,12 @@ func RunMigrations() error {
 
 	fmt.Println("Database migrations applied successfully, PostGIS ready.")
 
-	if err := seedDemoUser(ctx); err != nil {
+	demoUserID, err := seedDemoUser(ctx)
+	if err != nil {
 		return fmt.Errorf("failed seeding demo user: %v", err)
+	}
+	if err := seedNeighbourhood(ctx, demoUserID); err != nil {
+		return fmt.Errorf("failed seeding sample neighbourhood: %v", err)
 	}
 
 	return nil
@@ -123,17 +127,17 @@ func RunMigrations() error {
 // seedDemoUser ensures a demo account with known credentials always exists,
 // with a couple of sample posts so the feed isn't empty on first login.
 // Idempotent: safe to run on every startup.
-func seedDemoUser(ctx context.Context) error {
+func seedDemoUser(ctx context.Context) (string, error) {
 	var userID string
 	err := Pool.QueryRow(ctx, `SELECT id FROM users WHERE email = $1`, DemoUserEmail).Scan(&userID)
 	if err == nil {
 		// Already seeded.
-		return nil
+		return userID, nil
 	}
 
 	hashed, err := auth.HashPassword(DemoUserPassword)
 	if err != nil {
-		return fmt.Errorf("failed hashing demo password: %v", err)
+		return "", fmt.Errorf("failed hashing demo password: %v", err)
 	}
 
 	err = Pool.QueryRow(ctx,
@@ -141,7 +145,7 @@ func seedDemoUser(ctx context.Context) error {
 		"Demo User", DemoUserEmail, hashed,
 	).Scan(&userID)
 	if err != nil {
-		return fmt.Errorf("failed creating demo user: %v", err)
+		return "", fmt.Errorf("failed creating demo user: %v", err)
 	}
 
 	// Sample posts near Bangalore (matches the coordinates used throughout
@@ -158,9 +162,9 @@ func seedDemoUser(ctx context.Context) error {
 			 'meetup', ST_SetSRID(ST_MakePoint(77.6046, 12.9816), 4326))
 	`, userID)
 	if err != nil {
-		return fmt.Errorf("failed seeding demo posts: %v", err)
+		return "", fmt.Errorf("failed seeding demo posts: %v", err)
 	}
 
 	fmt.Printf("Seeded demo account (%s) for easy review access.\n", DemoUserEmail)
-	return nil
+	return userID, nil
 }
