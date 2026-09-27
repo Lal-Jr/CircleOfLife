@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { DEMO_EMAIL, DEMO_LOCATION } from "@/lib/demo";
 
 interface LocationState {
     lat: number | null;
@@ -7,7 +9,10 @@ interface LocationState {
     loading: boolean;
 }
 
-export function useLocation() {
+export function useLocation(): LocationState {
+    const { user, isLoading: userLoading } = useCurrentUser();
+    const isDemo = user?.email === DEMO_EMAIL;
+
     const [state, setState] = useState<LocationState>({
         lat: null,
         lng: null,
@@ -16,6 +21,10 @@ export function useLocation() {
     });
 
     useEffect(() => {
+        // Wait until we know who is signed in, and skip the permission
+        // prompt entirely for the demo account.
+        if (userLoading || isDemo) return;
+
         if (!("geolocation" in navigator)) {
             setState((s) => ({
                 ...s,
@@ -47,7 +56,13 @@ export function useLocation() {
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
-    }, []);
+    }, [userLoading, isDemo]);
 
+    if (isDemo) {
+        return { ...DEMO_LOCATION, error: null, loading: false };
+    }
+    if (userLoading) {
+        return { ...state, loading: true };
+    }
     return state;
 }

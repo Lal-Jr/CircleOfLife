@@ -13,7 +13,7 @@ The platform is engineered for modern performance, utilizing **PostGIS** for geo
 | Email | `demo@circleoflife.app` |
 | Password | `CircleDemo123!` |
 
-The demo is set in central Bangalore. Allow location access, or set your browser's location to around `12.97, 77.59`, to see the sample neighbourhood. If you're elsewhere, create a post and it appears on your own feed straight away.
+The demo account always sees the sample neighbourhood in central Bangalore, wherever you are, and there's no location prompt. Other accounts use your real location.
 
 ![Demo: one-click login, the nearby feed, a comment thread, the map and creating a post](docs/screenshots/demo.gif)
 
