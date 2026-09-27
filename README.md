@@ -156,4 +156,10 @@ cd ../frontend
 fly deploy --build-arg NEXT_PUBLIC_MAPBOX_TOKEN=pk.…
 ```
 
-`REDIS_URL` is optional. Without it, caching and rate limiting are skipped and live SSE updates are off, but everything else works.
+Redis runs on **Upstash's free tier** (Singapore region) over TLS:
+
+```bash
+fly secrets set -a circleoflife-api REDIS_URL='rediss://default:<token>@<name>.upstash.io:6379'
+```
+
+`REDIS_URL` is optional. Without it, caching and rate limiting are skipped and live SSE updates are off, but everything else works. `GET /api/health` reports `"redis": "connected"` when it's set up.
