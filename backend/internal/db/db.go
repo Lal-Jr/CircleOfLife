@@ -5,7 +5,17 @@ import (
 	"fmt"
 	"log"
 
+	"circleoflife/pkg/auth"
+
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Known, publicly-documented credentials for a seeded demo account, so
+// anyone reviewing this project (e.g. a recruiter) can log in immediately
+// instead of having to sign up first.
+const (
+	DemoUserEmail    = "demo@circleoflife.app"
+	DemoUserPassword = "CircleDemo123!"
 )
 
 var Pool *pgxpool.Pool
@@ -102,5 +112,55 @@ func RunMigrations() error {
 	}
 
 	fmt.Println("Database migrations applied successfully, PostGIS ready.")
+
+	if err := seedDemoUser(ctx); err != nil {
+		return fmt.Errorf("failed seeding demo user: %v", err)
+	}
+
+	return nil
+}
+
+// seedDemoUser ensures a demo account with known credentials always exists,
+// with a couple of sample posts so the feed isn't empty on first login.
+// Idempotent: safe to run on every startup.
+func seedDemoUser(ctx context.Context) error {
+	var userID string
+	err := Pool.QueryRow(ctx, `SELECT id FROM users WHERE email = $1`, DemoUserEmail).Scan(&userID)
+	if err == nil {
+		// Already seeded.
+		return nil
+	}
+
+	hashed, err := auth.HashPassword(DemoUserPassword)
+	if err != nil {
+		return fmt.Errorf("failed hashing demo password: %v", err)
+	}
+
+	err = Pool.QueryRow(ctx,
+		`INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id`,
+		"Demo User", DemoUserEmail, hashed,
+	).Scan(&userID)
+	if err != nil {
+		return fmt.Errorf("failed creating demo user: %v", err)
+	}
+
+	// Sample posts near Bangalore (matches the coordinates used throughout
+	// local testing/README examples) so a reviewer testing from - or
+	// spoofing their location to - that area sees a populated feed.
+	_, err = Pool.Exec(ctx, `
+		INSERT INTO posts (user_id, title, description, type, location)
+		VALUES
+			($1, 'Need help carrying groceries upstairs',
+			 'My elevator is out of service and I have several heavy bags. Any help would be great!',
+			 'help', ST_SetSRID(ST_MakePoint(77.5946, 12.9716), 4326)),
+			($1, 'Weekend park cleanup meetup',
+			 'Organizing a small group to tidy up the local park this Saturday morning. All welcome!',
+			 'meetup', ST_SetSRID(ST_MakePoint(77.6046, 12.9816), 4326))
+	`, userID)
+	if err != nil {
+		return fmt.Errorf("failed seeding demo posts: %v", err)
+	}
+
+	fmt.Printf("Seeded demo account (%s) for easy review access.\n", DemoUserEmail)
 	return nil
 }

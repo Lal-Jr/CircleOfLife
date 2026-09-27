@@ -6,7 +6,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDistance(meters: number): string {
+export function formatDistance(meters: number | undefined | null): string {
+  // Defends against a missing/non-numeric value (e.g. an API response that
+  // omits the field) rendering as "NaNkm away" instead of something sane.
+  if (meters == null || Number.isNaN(meters)) {
+    return "nearby"
+  }
   if (meters < 1000) {
     return `${Math.round(meters)}m`
   }

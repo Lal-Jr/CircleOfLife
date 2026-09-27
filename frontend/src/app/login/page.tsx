@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Mail, Lock, ArrowRight } from "lucide-react";
+import { MapPin, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getErrorMessage } from "@/lib/utils";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,12 @@ export default function LoginPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         login({ email, password });
+    };
+
+    const handleDemoLogin = () => {
+        setEmail(DEMO_EMAIL);
+        setPassword(DEMO_PASSWORD);
+        login({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
     };
 
     return (
@@ -94,6 +101,29 @@ export default function LoginPage() {
                                 )}
                             </Button>
                         </form>
+
+                        <div className="relative my-5">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-muted" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-card px-2 text-muted-foreground">Or</span>
+                            </div>
+                        </div>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full h-11 gap-2 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary"
+                            onClick={handleDemoLogin}
+                            disabled={isLoggingIn}
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            {isLoggingIn ? "Signing in..." : "Try the demo account"}
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground mt-2">
+                            No signup needed - one click and you're in.
+                        </p>
                     </CardContent>
                     <CardFooter className="flex flex-col items-center justify-center space-y-4 pt-4 border-t border-muted/50 bg-muted/10 rounded-b-xl">
                         <div className="text-sm text-muted-foreground">

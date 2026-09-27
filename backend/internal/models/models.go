@@ -34,7 +34,12 @@ type Post struct {
 	Author       string    `json:"author,omitempty"`
 	Lat          float64   `json:"lat"`
 	Lng          float64   `json:"lng"`
-	Distance     float64   `json:"distance,omitempty"`
+	// No `omitempty`: 0 is a meaningful distance (the viewer standing right
+	// on top of the post), not an absent value. `omitempty` on a float64
+	// treats 0.0 as empty and drops the field entirely, which made the
+	// frontend render "NaNkm away" for any post at the viewer's exact
+	// location (undefined / 1000 = NaN).
+	Distance     float64   `json:"distance"`
 	CommentCount int       `json:"commentCount"`
 	HelpfulCount int       `json:"helpfulCount"`
 	LikedByMe    bool      `json:"likedByMe"`
