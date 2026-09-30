@@ -1,17 +1,18 @@
-package handlers
+package main
 
 import (
-	"net/http"
 	"circleoflife/internal/cache"
 	"circleoflife/internal/db"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
-func HealthCheck(c *gin.Context) {
+// health reports whether the database and Redis are reachable.
+func health(c *gin.Context) {
 	status := map[string]string{
-		"status": "ok",
+		"status":   "ok",
 		"database": "connected",
-		"redis": "connected",
+		"redis":    "connected",
 	}
 
 	if err := db.Pool.Ping(c.Request.Context()); err != nil {

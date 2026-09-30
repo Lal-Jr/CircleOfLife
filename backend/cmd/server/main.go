@@ -1,3 +1,9 @@
+// Command server runs the Circle of Life API. This file is the composition root: it builds
+// each bounded context from its infrastructure adapters and mounts its HTTP routes.
+//
+//	Identity   members, sign-up, log-in and session tokens
+//	Community  posts, comments and helpful votes, and the ranked nearby feed
+//	Realtime   live updates to open browsers over SSE, fanned out through Redis
 package main
 
 import (
@@ -6,106 +12,85 @@ import (
 	"time"
 
 	"circleoflife/internal/cache"
+	community "circleoflife/internal/community/application"
+	communityinfra "circleoflife/internal/community/infrastructure"
+	communityhttp "circleoflife/internal/community/interfaces/httpapi"
 	"circleoflife/internal/config"
 	"circleoflife/internal/db"
-	"circleoflife/internal/events"
-	"circleoflife/internal/handlers"
+	identity "circleoflife/internal/identity/application"
+	identityinfra "circleoflife/internal/identity/infrastructure"
+	identityhttp "circleoflife/internal/identity/interfaces/httpapi"
 	"circleoflife/internal/middleware"
-	"circleoflife/internal/repository"
-	"circleoflife/internal/services"
+	"circleoflife/internal/realtime"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// 1. Setup Configuration
 	cfg := config.LoadConfig()
 
-	// 2. Setup Database Connection (includes running PostGIS migrations)
+	// Shared infrastructure: Postgres (with PostGIS migrations and demo seed) and Redis.
 	db.ConnectDB(cfg.DatabaseURL)
-
-	// 3. Setup Redis Cache and Pub/Sub Event Subscription
 	cache.InitRedis(cfg.RedisURL)
-	events.SubscribePostEvents(context.Background())
 
-	// 4. Initialize Repositories
-	userRepo := repository.NewUserRepository()
-	postRepo := repository.NewPostRepository()
-	commentRepo := repository.NewCommentRepository()
+	// Realtime context.
+	bus := realtime.NewBus(cache.Client)
+	bus.Listen(context.Background())
 
-	// 5. Initialize Services
-	authSvc := services.NewAuthService(userRepo, cfg.JWTSecret)
-	postSvc := services.NewPostService(postRepo)
-	commentSvc := services.NewCommentService(commentRepo)
+	// Identity context.
+	identityApp := identity.NewService(
+		identityinfra.NewUsers(db.Pool),
+		identityinfra.Bcrypt{},
+		identityinfra.NewJWTIssuer(cfg.JWTSecret),
+	)
+	identityAPI := identityhttp.NewHandler(identityApp)
 
-	// 6. Initialize Handlers
-	authHandler := handlers.NewAuthHandler(authSvc)
-	postHandler := handlers.NewPostHandler(postSvc)
-	commentHandler := handlers.NewCommentHandler(commentSvc)
+	// Community context.
+	communityApp := community.NewService(
+		communityinfra.NewPosts(db.Pool),
+		communityinfra.NewCachedFeed(communityinfra.NewFeed(db.Pool), cache.Client),
+		communityinfra.NewLiveUpdates(bus),
+		communityinfra.NewPlainText(),
+	)
+	communityAPI := communityhttp.NewHandler(communityApp)
 
-	// 7. Setup Router
 	r := gin.Default()
-
-	// Global Middleware Setup
 	r.Use(gin.Recovery())
+	r.Use(cors)
 
-	// Implement simple CORS assuming a local frontend running on 3000
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
-
-	// API Routes definition
 	api := r.Group("/api")
-
 	api.Use(middleware.RequestIDMiddleware())
 	api.Use(middleware.LoggerMiddleware())
+	api.GET("/health", health)
 
-	api.GET("/health", handlers.HealthCheck)
-
-	// Authentication API
 	auth := api.Group("/auth")
-	{
-		auth.POST("/signup", authHandler.Signup)
-		auth.POST("/login", authHandler.Login)
-	}
+	auth.POST("/signup", identityAPI.Signup)
+	auth.POST("/login", identityAPI.Login)
 
-	// Protected Routes (JWT required)
+	// Everything below requires a signed-in member (JWT).
 	protected := api.Group("/")
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	protected.GET("/events", bus.Stream)
+	protected.GET("/users/me", identityAPI.Me)
+	communityAPI.Register(protected.Group("/posts"), func(perMinute int) gin.HandlerFunc {
+		return middleware.RateLimitMiddleware(perMinute, time.Minute)
+	})
 
-	// Real-time Event Stream (SSE)
-	protected.GET("/events", handlers.HandleEvents)
-
-	// Current authenticated user's profile
-	protected.GET("/users/me", authHandler.Me)
-
-	// Posts API (Max 60 lookups/min on general feed)
-	posts := protected.Group("/posts")
-	posts.Use(middleware.RateLimitMiddleware(60, time.Minute))
-	{
-		posts.GET("", postHandler.GetNearbyPosts)
-		// Creation throttled tighter (5/min)
-		posts.POST("", middleware.RateLimitMiddleware(5, time.Minute), postHandler.CreatePost)
-		posts.GET("/:id", postHandler.GetPostByID)
-		posts.POST("/:id/like", middleware.RateLimitMiddleware(30, time.Minute), postHandler.ToggleLike)
-
-		// Nested Comments (10/min limit per user to prevent spam)
-		posts.GET("/:id/comments", commentHandler.GetComments)
-		posts.POST("/:id/comments", middleware.RateLimitMiddleware(10, time.Minute), commentHandler.CreateComment)
-	}
-
-	// 8. Start the server
-	log.Printf("Starting Server natively running on %s", cfg.Port)
+	log.Printf("Starting server on %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatalf("Server inherently failed to launch: %v", err)
+		log.Fatalf("Server failed to start: %v", err)
 	}
+}
+
+// cors allows the browser frontend, which is served from another origin, to call the API.
+func cors(c *gin.Context) {
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+	c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+	if c.Request.Method == "OPTIONS" {
+		c.AbortWithStatus(204)
+		return
+	}
+	c.Next()
 }
