@@ -83,9 +83,27 @@ The repository maintains a clean separation of concerns:
   - `/src/app`: Application routes (`/feed`, `/map`, `/post`, `/create`, `/login`, `/signup`).
   - `/src/components`: UI components, including the interactive map, feed cards, and layout elements.
   - `/src/hooks`: Custom React hooks mapping complex logic (e.g., `useFeed`, `useRealtimeFeed`, `useLocation`).
-- `/backend`
-  - `/internal`: Core business logic, separated into `services`, `handlers`, `middleware`, `models`, and `repository` layers.
-  - `/cmd`: The entry point for the application (`cmd/server/main.go`).
+- `/backend`: a domain-driven Go backend, split into bounded contexts that share one database.
+  - `/internal/identity`: members, sign-up, log-in and session tokens.
+  - `/internal/community`: posts, comments and helpful votes, and the ranked nearby feed.
+  - `/internal/realtime`: live updates over SSE, fanned out across instances through Redis pub/sub.
+  - `/internal/{db,cache,config,middleware,platform}`: shared infrastructure (migrations and seed, Redis, JWT auth, rate limiting, the response envelope).
+  - `/cmd/server`: the composition root, which wires each context's adapters into its use cases and mounts the routes.
+
+### Backend architecture
+
+Identity and Community are each split into four layers, with dependencies pointing inwards:
+
+| Layer | What it holds | Community example |
+| --- | --- | --- |
+| `domain` | Aggregates, value objects, domain events and repository interfaces. No HTTP, SQL or Redis. | The `Post` aggregate root creates its `Comment` entities through `Post.AddComment`, enforces title, description and comment rules, and records a `PostPublished` event. `Location` and `Kind` are value objects. |
+| `application` | Use cases. Commands change an aggregate through its repository; queries read projections built for the screen. | `PublishPost` cleans the text, publishes the post, saves it and hands its events to the `EventPublisher` port. `Feed` reads `PostView`s. |
+| `infrastructure` | Adapters that implement the ports. | Postgres/PostGIS repository and feed reader, a Redis cache in front of the feed, bluemonday, and `LiveUpdates`, which translates `PostPublished` into the Realtime context's `post_created` message. |
+| `interfaces/httpapi` | Gin handlers that check the request, call one use case and map domain errors to HTTP statuses. | A missing post is 404; a broken domain rule is 400. |
+
+The feed's ranking policy lives in the domain (`community/domain/ranking.go`): distance thresholds for *urgent* (under 500 m) and *nearby* (under 2 km), the boosts, and `Score`, which decays with age and distance. The Postgres feed reader generates its `ORDER BY` from those same constants, so the database can rank and paginate, and an integration test checks that the SQL score equals `domain.Score`.
+
+The contexts only share member IDs. Authors' names appear in the Community context's read models through a join on the shared database, not through Identity's domain objects.
 
 ## 🏁 Getting Started
 
@@ -127,6 +145,11 @@ go mod tidy
 go run cmd/server/main.go
 ```
 The API will be available at `http://localhost:8080`.
+
+Run the tests with `go test ./...`. The domain and use-case tests need nothing else. To also run the check that the feed's SQL ranking matches the domain's, point `TEST_DATABASE_URL` at a PostGIS database:
+```bash
+TEST_DATABASE_URL=postgres://postgres:password@localhost:5432/community?sslmode=disable go test ./...
+```
 
 ### 3. Running the Frontend
 In a separate terminal, navigate to the `/frontend` directory:
