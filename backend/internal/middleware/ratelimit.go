@@ -12,7 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RateLimitMiddleware blocks abuse by applying a Redis Token Bucket counter per IP/User over the given limit and window.
+// RateLimitMiddleware blocks abuse with a fixed-window counter in Redis, per user (or IP when
+// signed out): each request INCRs a key that expires after the window, and requests past the limit
+// get 429 until the key expires.
 func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if cache.Client == nil {

@@ -55,7 +55,7 @@ Neighbour accounts can't be logged into; only the demo account has a usable pass
 
 ### 🛡️ Production-Ready Security & Polish
 - **Authentication:** Stateless, secure JWT-based authentication flow with bcrypt password hashing.
-- **Rate Limiting:** Granular, token-bucket user-level rate limiting (backed by Redis) prevents spam on post creation (5/min) and commenting (10/min).
+- **Rate Limiting:** Per-user fixed-window rate limiting in Redis (`INCR` on a key that expires with the window) prevents spam on post creation (5/min), commenting (10/min) and likes (30/min), under an overall 60/min on post routes.
 - **Input Sanitization:** Strict HTML and XSS sanitization applied server-side using `bluemonday` to prevent malicious payloads, coupled with tuned character length constraints.
 
 ## 🛠️ Tech Stack
